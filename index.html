@@ -24,13 +24,22 @@
   }
 
   * { box-sizing: border-box; }
-  html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text); font-family: Inter, Arial, Helvetica, sans-serif; }
-  body { overflow: hidden; }
+  html, body {
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: Inter, Arial, Helvetica, sans-serif;
+    overflow: hidden;
+  }
 
   #app {
     position: relative;
-    width: 100vw;
-    height: 100vh;
+    width: var(--app-width, 100vw);
+    height: var(--app-height, 100dvh);
+    max-width: 100%;
+    overflow: hidden;
     background: var(--bg);
   }
 
@@ -863,6 +872,159 @@
     }
   }
 
+
+  /* Runtime mobile mode. JS adds .mobile-ui for Android/iOS/in-app browsers. */
+  #app.mobile-ui {
+    --bottom-h: 112px;
+  }
+
+  #app.mobile-ui #canvas,
+  #app.mobile-ui.solution-open #canvas {
+    width: 100% !important;
+    height: 100% !important;
+  }
+
+  #app.mobile-ui #bottomBar,
+  #app.mobile-ui.solution-open #bottomBar {
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: var(--bottom-h) !important;
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    grid-template-rows: 48px 48px !important;
+    align-items: center !important;
+    justify-items: center !important;
+    gap: 6px 8px !important;
+    padding: 6px 8px !important;
+    overflow: hidden !important;
+  }
+
+  #app.mobile-ui #analysisSelector {
+    grid-column: 1 / 3 !important;
+    grid-row: 1 !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    height: 46px !important;
+    justify-self: stretch !important;
+  }
+
+  #app.mobile-ui #analysisSelector .analysis-choice {
+    flex: 1 1 0 !important;
+    min-width: 0 !important;
+    width: 50% !important;
+    height: 44px !important;
+    padding: 0 4px !important;
+    font-size: 10px !important;
+  }
+
+  #app.mobile-ui #runBtn {
+    grid-column: 3 !important;
+    grid-row: 1 !important;
+  }
+
+  #app.mobile-ui #undoBtn {
+    grid-column: 4 !important;
+    grid-row: 1 !important;
+  }
+
+  #app.mobile-ui #rotateBottomBtn {
+    grid-column: 1 !important;
+    grid-row: 2 !important;
+  }
+
+  #app.mobile-ui #deleteBottomBtn {
+    grid-column: 2 !important;
+    grid-row: 2 !important;
+  }
+
+  #app.mobile-ui #clearBtn {
+    grid-column: 3 / 5 !important;
+    grid-row: 2 !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    height: 44px !important;
+    border-radius: 8px !important;
+    padding: 0 8px !important;
+    font-size: 12px !important;
+  }
+
+  #app.mobile-ui .tool-btn {
+    width: 44px !important;
+    height: 44px !important;
+    font-size: 21px !important;
+  }
+
+  #app.mobile-ui #viewControls,
+  #app.mobile-ui.solution-open #viewControls {
+    right: 10px !important;
+    bottom: calc(var(--bottom-h) + 10px) !important;
+    gap: 6px !important;
+  }
+
+  #app.mobile-ui #viewControls button {
+    width: 42px !important;
+    height: 42px !important;
+  }
+
+  #app.mobile-ui #addBtn {
+    left: 10px !important;
+    top: 10px !important;
+    width: 52px !important;
+    height: 52px !important;
+    font-size: 38px !important;
+    line-height: 46px !important;
+  }
+
+  #app.mobile-ui #palette {
+    left: 10px !important;
+    top: 70px !important;
+    width: min(220px, calc(100% - 20px)) !important;
+  }
+
+  #app.mobile-ui #status,
+  #app.mobile-ui.solution-open #status {
+    top: 10px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    max-width: calc(100% - 150px) !important;
+    padding: 6px 10px !important;
+    font-size: 11px !important;
+    line-height: 1.25 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  #app.mobile-ui #solutionToggleBtn {
+    right: 10px !important;
+    top: 68px !important;
+  }
+
+  #app.mobile-ui #solutionPanel {
+    left: 8px !important;
+    right: 8px !important;
+    top: 56px !important;
+    bottom: calc(var(--bottom-h) + 8px) !important;
+    width: auto !important;
+    max-height: none !important;
+    border: 1px solid var(--panel-border) !important;
+    border-radius: 10px !important;
+  }
+
+  #app.mobile-ui #inspector,
+  #app.mobile-ui.solution-open #inspector {
+    right: 8px !important;
+    top: 116px !important;
+    width: min(248px, calc(100% - 16px)) !important;
+    max-height: calc(100% - var(--bottom-h) - 130px) !important;
+    overflow: auto !important;
+  }
+
+
 </style>
 </head>
 <body>
@@ -926,7 +1088,7 @@
     </button>
   </div>
 
-  <div id="status">Drag parts • terminal → terminal to wire • drag empty grid to pan</div>
+  <div id="status">Pan: drag empty grid • Zoom: pinch or +/- • Wire: terminal → terminal</div>
 
   <aside id="inspector" aria-live="polite"></aside>
 
@@ -965,6 +1127,7 @@
 
   const SVG_NS = 'http://www.w3.org/2000/svg';
   const GRID = 24;
+  const app = document.getElementById('app');
 
   const canvas = document.getElementById('canvas');
   const viewportLayer = document.getElementById('viewportLayer');
@@ -1083,19 +1246,20 @@
     if (!bounds) return;
 
     const bottomBar = document.getElementById('bottomBar');
-    const usableWidth = Math.max(220, canvas.clientWidth);
+    const canvasRect = canvas.getBoundingClientRect();
+    const usableWidth = Math.max(220, canvasRect.width);
     const usableHeight = Math.max(
       220,
-      canvas.clientHeight - (bottomBar?.offsetHeight || 82)
+      canvasRect.height - (bottomBar?.offsetHeight || 82)
     );
 
     const width = Math.max(140, bounds.maxX - bounds.minX);
     const height = Math.max(140, bounds.maxY - bounds.minY);
 
     const mobile = window.innerWidth <= 900;
-    const padX = mobile ? 24 : 110;
-    const padY = mobile ? 52 : 105;
-    const maxZoom = mobile ? 2.15 : 2.25;
+    const padX = mobile ? 18 : 110;
+    const padY = mobile ? 34 : 105;
+    const maxZoom = mobile ? 2.5 : 2.25;
 
     const zoom = clamp(
       Math.min(
@@ -1118,7 +1282,8 @@
   }
 
   function isMobileLayout() {
-    return window.matchMedia('(max-width: 900px)').matches;
+    return app.classList.contains('mobile-ui') ||
+      window.matchMedia('(max-width: 900px)').matches;
   }
 
   function pointerPair() {
@@ -1197,6 +1362,26 @@
   function setStatus(message, type = '') {
     statusEl.textContent = message;
     statusEl.className = type;
+  }
+
+  function runtimeMobileMode() {
+    const ua = navigator.userAgent || '';
+    const touchDevice = navigator.maxTouchPoints > 0;
+    const mobileUA = /Android|iPhone|iPad|iPod|Mobile|Messenger|FBAN|FBAV/i.test(ua);
+    return mobileUA || (touchDevice && window.innerWidth < 1400);
+  }
+
+  function syncVisibleViewport() {
+    const vv = window.visualViewport;
+    const width = vv ? vv.width : window.innerWidth;
+    const height = vv ? vv.height : window.innerHeight;
+
+    document.documentElement.style.setProperty('--app-width', `${Math.round(width)}px`);
+    document.documentElement.style.setProperty('--app-height', `${Math.round(height)}px`);
+
+    app.classList.toggle('mobile-ui', runtimeMobileMode());
+
+    return { width, height };
   }
 
   function snapshot() {
@@ -2733,6 +2918,23 @@
     return screenToWorld(screen.x, screen.y);
   }
 
+  function visibleWorldBounds(marginPx = 56) {
+    const bottomBar = document.getElementById('bottomBar');
+    const rect = canvas.getBoundingClientRect();
+    const topLeft = screenToWorld(marginPx, marginPx);
+    const bottomRight = screenToWorld(
+      Math.max(marginPx, rect.width - marginPx),
+      Math.max(marginPx, rect.height - (bottomBar?.offsetHeight || 0) - marginPx)
+    );
+
+    return {
+      minX: Math.min(topLeft.x, bottomRight.x),
+      maxX: Math.max(topLeft.x, bottomRight.x),
+      minY: Math.min(topLeft.y, bottomRight.y),
+      maxY: Math.max(topLeft.y, bottomRight.y)
+    };
+  }
+
   canvas.addEventListener('pointerdown', event => {
     const sp = screenPoint(event);
     state.activePointers.set(event.pointerId, sp);
@@ -2828,8 +3030,17 @@
       const c = getComponent(state.drag.id);
       if (!c) return;
       const p = state.pointer;
-      c.x = snap(clamp(p.x - state.drag.offsetX, -5000, 5000));
-      c.y = snap(clamp(p.y - state.drag.offsetY, -5000, 5000));
+      const bounds = visibleWorldBounds(72);
+      c.x = snap(clamp(
+        p.x - state.drag.offsetX,
+        bounds.minX,
+        bounds.maxX
+      ));
+      c.y = snap(clamp(
+        p.y - state.drag.offsetY,
+        bounds.minY,
+        bounds.maxY
+      ));
       stopSimulation(false);
       render();
     }
@@ -3243,14 +3454,27 @@
   });
 
   let resizeTimer = null;
-  window.addEventListener('resize', () => {
+
+  function handleViewportChange() {
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(() => {
+      syncVisibleViewport();
       renderSolution();
-      if (!state.view.userAdjusted) fitCircuit(false);
-      else render();
-    }, 80);
-  });
+
+      if (!state.view.userAdjusted) {
+        fitCircuit(false);
+      } else {
+        render();
+      }
+    }, 60);
+  }
+
+  window.addEventListener('resize', handleViewportChange);
+
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', handleViewportChange);
+    window.visualViewport.addEventListener('scroll', handleViewportChange);
+  }
 
   function starterCircuit() {
     const w = canvas.clientWidth;
@@ -3272,7 +3496,13 @@
     requestAnimationFrame(() => fitCircuit(false));
   }
 
+  syncVisibleViewport();
   starterCircuit();
+
+  requestAnimationFrame(() => {
+    syncVisibleViewport();
+    fitCircuit(false);
+  });
 })();
 </script>
 </body>
