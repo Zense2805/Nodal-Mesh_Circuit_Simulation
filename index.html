@@ -638,6 +638,231 @@
     .wire-flow { animation: none; }
   }
 
+
+  /* ==========================================================
+     MOBILE / IN-APP BROWSER LAYOUT
+     ========================================================== */
+  @media (max-width: 900px) {
+    :root { --bottom-h: 112px; }
+
+    #app {
+      overflow: hidden;
+    }
+
+    #canvas,
+    #app.solution-open #canvas {
+      width: 100% !important;
+      height: 100% !important;
+    }
+
+    #addBtn {
+      left: 10px;
+      top: 10px;
+      width: 52px;
+      height: 52px;
+      font-size: 38px;
+      line-height: 46px;
+    }
+
+    #palette {
+      left: 10px;
+      top: 70px;
+      width: min(220px, calc(100vw - 20px));
+    }
+
+    #status {
+      top: 10px;
+      left: 50% !important;
+      transform: translateX(-50%);
+      width: auto;
+      max-width: calc(100vw - 150px);
+      padding: 6px 10px;
+      font-size: 11px;
+      line-height: 1.25;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    #bottomBar,
+    #app.solution-open #bottomBar {
+      left: 0;
+      right: 0 !important;
+      bottom: 0;
+      width: 100%;
+      max-width: 100%;
+      min-height: var(--bottom-h);
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-rows: 48px 48px;
+      align-items: center;
+      justify-items: center;
+      gap: 6px 8px;
+      padding: 6px 8px;
+      overflow: hidden;
+    }
+
+    #analysisSelector {
+      grid-column: 1 / 3;
+      grid-row: 1;
+      width: 100%;
+      height: 46px;
+      min-width: 0;
+      justify-self: stretch;
+    }
+
+    #analysisSelector .analysis-choice {
+      flex: 1 1 0;
+      min-width: 0;
+      width: 50%;
+      height: 44px;
+      padding: 0 4px;
+      font-size: 10px;
+    }
+
+    #runBtn {
+      grid-column: 3;
+      grid-row: 1;
+    }
+
+    #undoBtn {
+      grid-column: 4;
+      grid-row: 1;
+    }
+
+    #rotateBottomBtn {
+      grid-column: 1;
+      grid-row: 2;
+    }
+
+    #deleteBottomBtn {
+      grid-column: 2;
+      grid-row: 2;
+    }
+
+    #clearBtn {
+      grid-column: 3 / 5;
+      grid-row: 2;
+      width: 100%;
+      min-width: 0;
+      max-width: none;
+      height: 44px;
+      border-radius: 8px;
+      padding: 0 8px;
+      font-size: 12px;
+    }
+
+    .tool-btn {
+      width: 44px;
+      height: 44px;
+      font-size: 21px;
+    }
+
+    #viewControls,
+    #app.solution-open #viewControls {
+      right: 10px;
+      bottom: calc(var(--bottom-h) + 10px);
+      gap: 6px;
+    }
+
+    #viewControls button {
+      width: 42px;
+      height: 42px;
+      font-size: 19px;
+    }
+
+    #viewControls #fitViewBtn {
+      font-size: 10px;
+    }
+
+    #solutionToggleBtn {
+      right: 10px;
+      top: 68px;
+      height: 38px;
+      min-width: 92px;
+      font-size: 11px;
+    }
+
+    #solutionPanel {
+      left: 8px;
+      right: 8px;
+      top: 56px;
+      bottom: calc(var(--bottom-h) + 8px);
+      width: auto;
+      max-height: none;
+      border: 1px solid var(--panel-border);
+      border-radius: 10px;
+      box-shadow: 0 12px 34px rgba(0,0,0,.5);
+    }
+
+    #solutionContent {
+      padding: 14px 14px 24px;
+      font-size: 14px;
+      line-height: 1.62;
+    }
+
+    .solution-head {
+      padding: 11px 12px;
+    }
+
+    .solution-head strong {
+      font-size: 15px;
+    }
+
+    .answer-grid {
+      grid-template-columns: 1fr;
+    }
+
+    #inspector,
+    #app.solution-open #inspector {
+      right: 8px;
+      top: 116px;
+      width: min(248px, calc(100vw - 16px));
+      max-height: calc(100% - var(--bottom-h) - 130px);
+      overflow: auto;
+    }
+  }
+
+  @media (max-width: 420px) {
+    :root { --bottom-h: 108px; }
+
+    #bottomBar,
+    #app.solution-open #bottomBar {
+      grid-template-rows: 46px 46px;
+      gap: 5px 6px;
+      padding: 5px 6px;
+    }
+
+    .tool-btn {
+      width: 40px;
+      height: 40px;
+      font-size: 19px;
+    }
+
+    #analysisSelector {
+      height: 42px;
+    }
+
+    #analysisSelector .analysis-choice {
+      height: 40px;
+      font-size: 9px;
+    }
+
+    #clearBtn {
+      height: 40px;
+    }
+
+    #viewControls button {
+      width: 39px;
+      height: 39px;
+    }
+
+    #status {
+      max-width: calc(100vw - 132px);
+      font-size: 10px;
+    }
+  }
+
 </style>
 </head>
 <body>
@@ -701,7 +926,7 @@
     </button>
   </div>
 
-  <div id="status">Drag components. Drag from one green terminal to another to wire the circuit.</div>
+  <div id="status">Drag parts • terminal → terminal to wire • drag empty grid to pan</div>
 
   <aside id="inspector" aria-live="polite"></aside>
 
@@ -777,7 +1002,9 @@
       panY: 0,
       userAdjusted: false
     },
-    panDrag: null
+    panDrag: null,
+    activePointers: new Map(),
+    pinch: null
   };
 
   const snap = value => Math.round(value / GRID) * GRID;
@@ -866,9 +1093,9 @@
     const height = Math.max(140, bounds.maxY - bounds.minY);
 
     const mobile = window.innerWidth <= 900;
-    const padX = mobile ? 42 : 110;
-    const padY = mobile ? 80 : 105;
-    const maxZoom = mobile ? 1.75 : 2.25;
+    const padX = mobile ? 24 : 110;
+    const padY = mobile ? 52 : 105;
+    const maxZoom = mobile ? 2.15 : 2.25;
 
     const zoom = clamp(
       Math.min(
@@ -884,13 +1111,81 @@
 
     state.view.zoom = zoom;
     state.view.panX = usableWidth / 2 - centerX * zoom;
-    state.view.panY = usableHeight / 2 - centerY * zoom + 18;
+    state.view.panY =
+      usableHeight / 2 - centerY * zoom + (mobile ? -6 : 18);
     state.view.userAdjusted = markAdjusted;
     applyViewportTransform();
   }
 
   function isMobileLayout() {
     return window.matchMedia('(max-width: 900px)').matches;
+  }
+
+  function pointerPair() {
+    return [...state.activePointers.values()].slice(0, 2);
+  }
+
+  function pairCenter(pair) {
+    return {
+      x: (pair[0].x + pair[1].x) / 2,
+      y: (pair[0].y + pair[1].y) / 2
+    };
+  }
+
+  function pairDistance(pair) {
+    return Math.hypot(
+      pair[1].x - pair[0].x,
+      pair[1].y - pair[0].y
+    );
+  }
+
+  function beginPinchIfReady() {
+    if (state.activePointers.size < 2) return false;
+
+    const pair = pointerPair();
+    const center = pairCenter(pair);
+    const distance = Math.max(1, pairDistance(pair));
+
+    state.drag = null;
+    state.wireDrag = null;
+    state.panDrag = null;
+
+    state.pinch = {
+      startDistance: distance,
+      startZoom: state.view.zoom,
+      startPanX: state.view.panX,
+      startPanY: state.view.panY,
+      startCenter: center,
+      worldX: (center.x - state.view.panX) / state.view.zoom,
+      worldY: (center.y - state.view.panY) / state.view.zoom
+    };
+
+    state.view.userAdjusted = true;
+    canvas.classList.add('pan-cursor');
+    return true;
+  }
+
+  function updatePinch() {
+    if (!state.pinch || state.activePointers.size < 2) return;
+
+    const pair = pointerPair();
+    const center = pairCenter(pair);
+    const distance = Math.max(1, pairDistance(pair));
+
+    const zoom = clamp(
+      state.pinch.startZoom *
+      (distance / state.pinch.startDistance),
+      0.35,
+      3.5
+    );
+
+    state.view.zoom = zoom;
+    state.view.panX =
+      center.x - state.pinch.worldX * zoom;
+    state.view.panY =
+      center.y - state.pinch.worldY * zoom;
+
+    applyViewportTransform();
   }
 
   function svg(tag, attrs = {}) {
@@ -2439,6 +2734,16 @@
   }
 
   canvas.addEventListener('pointerdown', event => {
+    const sp = screenPoint(event);
+    state.activePointers.set(event.pointerId, sp);
+
+    if (state.activePointers.size >= 2) {
+      event.preventDefault();
+      try { canvas.setPointerCapture(event.pointerId); } catch (_) {}
+      beginPinchIfReady();
+      return;
+    }
+
     const terminal = event.target.closest?.('[data-terminal-ref]');
     if (terminal) {
       event.preventDefault();
@@ -2492,6 +2797,16 @@
   });
 
   canvas.addEventListener('pointermove', event => {
+    const sp = screenPoint(event);
+    if (state.activePointers.has(event.pointerId)) {
+      state.activePointers.set(event.pointerId, sp);
+    }
+
+    if (state.pinch && state.activePointers.size >= 2) {
+      updatePinch();
+      return;
+    }
+
     state.pointer = pointerToCanvas(event);
 
     if (state.panDrag && state.panDrag.pointerId === event.pointerId) {
@@ -2521,6 +2836,16 @@
   });
 
   canvas.addEventListener('pointerup', event => {
+    state.activePointers.delete(event.pointerId);
+
+    if (state.pinch) {
+      if (state.activePointers.size < 2) {
+        state.pinch = null;
+        canvas.classList.remove('pan-cursor');
+      }
+      return;
+    }
+
     if (state.panDrag && state.panDrag.pointerId === event.pointerId) {
       state.panDrag = null;
       canvas.classList.remove('pan-cursor');
@@ -2551,6 +2876,8 @@
     state.drag = null;
     state.wireDrag = null;
     state.panDrag = null;
+    state.pinch = null;
+    state.activePointers.clear();
     canvas.classList.remove('pan-cursor');
     render();
   });
