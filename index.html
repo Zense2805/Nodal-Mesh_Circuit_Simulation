@@ -7,6 +7,7 @@
 <style>
   :root {
     --bg: #050707;
+    --bottom-h: 82px;
     --grid-minor: #11201c;
     --grid-major: #1a2c27;
     --wire-off: #d6ddda;
@@ -40,6 +41,7 @@
     touch-action: none;
     user-select: none;
     cursor: default;
+    transition: width .18s ease;
   }
 
   .floating-btn {
@@ -174,31 +176,41 @@
     left: 0;
     right: 0;
     bottom: 0;
-    height: 82px;
+    min-height: var(--bottom-h);
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 14px;
-    padding: 10px 16px;
+    gap: 12px;
+    padding: 9px 14px;
     border-top: 1px solid #353d3a;
-    background: rgba(50, 54, 52, .96);
+    background: rgba(50, 54, 52, .97);
     z-index: 15;
   }
+
   .tool-btn {
-    width: 58px;
-    height: 58px;
+    width: 54px;
+    height: 54px;
+    flex: 0 0 auto;
     border-radius: 50%;
     border: 2px solid #aeb6b2;
     background: #3a403e;
     color: #e9efec;
     display: grid;
     place-items: center;
-    font-size: 27px;
+    font-size: 25px;
     cursor: pointer;
   }
+
   .tool-btn:hover { background: #454c49; }
   #runBtn.running { color: var(--current); border-color: var(--current); }
-  #clearBtn { border-radius: 8px; width: auto; padding: 0 18px; font-size: 15px; }
+
+  #clearBtn {
+    border-radius: 8px;
+    width: auto;
+    min-width: 78px;
+    padding: 0 14px;
+    font-size: 14px;
+  }
 
   .wire-base {
     fill: none;
@@ -331,11 +343,11 @@
     position: absolute;
     right: 0;
     top: 0;
-    bottom: 82px;
-    width: min(420px, 40vw);
+    bottom: var(--bottom-h);
+    width: clamp(360px, 32vw, 470px);
     overflow: auto;
     border-left: 1px solid var(--panel-border);
-    background: rgba(14, 17, 16, .99);
+    background: rgba(14, 17, 16, .995);
     box-shadow: -10px 0 28px rgba(0,0,0,.28);
     z-index: 19;
     display: none;
@@ -343,21 +355,21 @@
 
   #solutionPanel.open { display: block; }
 
-  /* Split-view mode: the solution notebook gets its own space. */
+  /* Desktop split-view: the circuit keeps its own readable area. */
   #app.solution-open #canvas {
-    width: calc(100% - min(420px, 40vw));
+    width: calc(100% - clamp(360px, 32vw, 470px));
   }
 
   #app.solution-open #bottomBar {
-    right: min(420px, 40vw);
+    right: clamp(360px, 32vw, 470px);
   }
 
   #app.solution-open #status {
-    left: calc((100% - min(420px, 40vw)) / 2);
+    left: calc((100% - clamp(360px, 32vw, 470px)) / 2);
   }
 
   #app.solution-open #inspector {
-    right: calc(min(420px, 40vw) + 18px);
+    right: calc(clamp(360px, 32vw, 470px) + 18px);
   }
 
   .solution-head {
@@ -375,8 +387,8 @@
 
   .solution-head strong {
     color: var(--current);
-    font-size: 15px;
-    letter-spacing: .02em;
+    font-size: 16px;
+    letter-spacing: .01em;
   }
 
   #closeSolutionBtn {
@@ -390,10 +402,10 @@
   }
 
   #solutionContent {
-    padding: 13px 14px 18px;
+    padding: 16px 18px 24px;
     color: #d9dfdc;
-    font-size: 13px;
-    line-height: 1.55;
+    font-size: 14px;
+    line-height: 1.68;
   }
 
   .solution-summary {
@@ -565,18 +577,67 @@
     .answer-grid { grid-template-columns: 1fr; }
   }
 
+
+  #viewControls {
+    position: absolute;
+    right: 18px;
+    bottom: calc(var(--bottom-h) + 16px);
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    z-index: 16;
+  }
+
+  #viewControls button {
+    width: 44px;
+    height: 44px;
+    border: 1px solid #58635f;
+    border-radius: 8px;
+    background: rgba(34, 40, 38, .94);
+    color: #edf4f0;
+    font-size: 20px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  #viewControls #fitViewBtn {
+    font-size: 11px;
+    letter-spacing: .03em;
+  }
+
+  #app.solution-open #viewControls {
+    right: calc(clamp(360px, 32vw, 470px) + 18px);
+  }
+
+  #solutionToggleBtn {
+    position: absolute;
+    right: 18px;
+    top: 18px;
+    min-width: 104px;
+    height: 38px;
+    padding: 0 12px;
+    border: 1px solid #4d5a54;
+    border-radius: 7px;
+    background: rgba(25, 31, 28, .95);
+    color: var(--current);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: .04em;
+    cursor: pointer;
+    z-index: 17;
+    display: none;
+  }
+
+  #solutionToggleBtn.available { display: block; }
+
+  #app.solution-open #solutionToggleBtn { display: none; }
+
+  .pan-cursor { cursor: grabbing !important; }
+
   @media (prefers-reduced-motion: reduce) {
     .wire-flow { animation: none; }
   }
 
-  @media (max-width: 720px) {
-    #inspector { top: 92px; right: 8px; width: 230px; }
-    #addBtn { left: 8px; top: 8px; }
-    #palette { left: 8px; top: 82px; }
-    #status { top: 8px; max-width: 50vw; }
-    #bottomBar { height: 72px; gap: 8px; }
-    .tool-btn { width: 50px; height: 50px; }
-  }
 </style>
 </head>
 <body>
@@ -593,9 +654,11 @@
       </pattern>
     </defs>
     <rect id="gridRect" x="0" y="0" width="100%" height="100%" fill="url(#majorGrid)" />
-    <g id="wireLayer"></g>
-    <g id="componentLayer"></g>
-    <g id="overlayLayer"></g>
+    <g id="viewportLayer">
+      <g id="wireLayer"></g>
+      <g id="componentLayer"></g>
+      <g id="overlayLayer"></g>
+    </g>
   </svg>
 
   <button id="addBtn" class="floating-btn" title="Add component" aria-label="Add component">+</button>
@@ -650,6 +713,14 @@
     <div id="solutionContent"></div>
   </aside>
 
+  <button id="solutionToggleBtn" type="button" aria-label="Show complete solution">SOLUTION</button>
+
+  <div id="viewControls" aria-label="Circuit view controls">
+    <button id="zoomInBtn" type="button" title="Zoom in" aria-label="Zoom in">+</button>
+    <button id="zoomOutBtn" type="button" title="Zoom out" aria-label="Zoom out">−</button>
+    <button id="fitViewBtn" type="button" title="Fit circuit to screen" aria-label="Fit circuit to screen">FIT</button>
+  </div>
+
   <div id="bottomBar">
     <div id="analysisSelector" role="group" aria-label="Analysis method">
       <button class="analysis-choice active" data-analysis-method="nodal" type="button">NODAL</button>
@@ -671,6 +742,7 @@
   const GRID = 24;
 
   const canvas = document.getElementById('canvas');
+  const viewportLayer = document.getElementById('viewportLayer');
   const wireLayer = document.getElementById('wireLayer');
   const componentLayer = document.getElementById('componentLayer');
   const overlayLayer = document.getElementById('overlayLayer');
@@ -682,6 +754,8 @@
   const solutionTitle = document.getElementById('solutionTitle');
   const solutionContent = document.getElementById('solutionContent');
   const analysisSelector = document.getElementById('analysisSelector');
+  const solutionToggleBtn = document.getElementById('solutionToggleBtn');
+  const viewControls = document.getElementById('viewControls');
 
   const state = {
     components: [],
@@ -696,11 +770,128 @@
     pointer: { x: 0, y: 0 },
     nextComponent: 1,
     nextWire: 1,
-    history: []
+    history: [],
+    view: {
+      zoom: 1,
+      panX: 0,
+      panY: 0,
+      userAdjusted: false
+    },
+    panDrag: null
   };
 
   const snap = value => Math.round(value / GRID) * GRID;
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+
+  function applyViewportTransform() {
+    viewportLayer.setAttribute(
+      'transform',
+      `translate(${state.view.panX} ${state.view.panY}) scale(${state.view.zoom})`
+    );
+  }
+
+  function screenPoint(eventOrX, maybeY) {
+    const rect = canvas.getBoundingClientRect();
+
+    if (typeof eventOrX === 'object') {
+      return {
+        x: eventOrX.clientX - rect.left,
+        y: eventOrX.clientY - rect.top
+      };
+    }
+
+    return {
+      x: eventOrX - rect.left,
+      y: maybeY - rect.top
+    };
+  }
+
+  function screenToWorld(x, y) {
+    return {
+      x: (x - state.view.panX) / state.view.zoom,
+      y: (y - state.view.panY) / state.view.zoom
+    };
+  }
+
+  function zoomAtScreenPoint(nextZoom, screenX, screenY, markAdjusted = true) {
+    const oldZoom = state.view.zoom;
+    nextZoom = clamp(nextZoom, 0.35, 3.5);
+    if (Math.abs(nextZoom - oldZoom) < 1e-9) return;
+
+    const world = screenToWorld(screenX, screenY);
+    state.view.zoom = nextZoom;
+    state.view.panX = screenX - world.x * nextZoom;
+    state.view.panY = screenY - world.y * nextZoom;
+    if (markAdjusted) state.view.userAdjusted = true;
+    applyViewportTransform();
+  }
+
+  function circuitBounds() {
+    if (!state.components.length) return null;
+
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+
+    state.components.forEach(component => {
+      const pad = component.type === 'ground' ? 70 : 86;
+      minX = Math.min(minX, component.x - pad);
+      maxX = Math.max(maxX, component.x + pad);
+      minY = Math.min(minY, component.y - pad);
+      maxY = Math.max(maxY, component.y + pad);
+
+      componentTerminalRefs(component).forEach(ref => {
+        const p = terminalPosition(ref);
+        if (!p) return;
+        minX = Math.min(minX, p.x);
+        maxX = Math.max(maxX, p.x);
+        minY = Math.min(minY, p.y);
+        maxY = Math.max(maxY, p.y);
+      });
+    });
+
+    return { minX, minY, maxX, maxY };
+  }
+
+  function fitCircuit(markAdjusted = false) {
+    const bounds = circuitBounds();
+    if (!bounds) return;
+
+    const bottomBar = document.getElementById('bottomBar');
+    const usableWidth = Math.max(220, canvas.clientWidth);
+    const usableHeight = Math.max(
+      220,
+      canvas.clientHeight - (bottomBar?.offsetHeight || 82)
+    );
+
+    const width = Math.max(140, bounds.maxX - bounds.minX);
+    const height = Math.max(140, bounds.maxY - bounds.minY);
+
+    const mobile = window.innerWidth <= 900;
+    const padX = mobile ? 42 : 110;
+    const padY = mobile ? 80 : 105;
+    const maxZoom = mobile ? 1.75 : 2.25;
+
+    const zoom = clamp(
+      Math.min(
+        (usableWidth - padX * 2) / width,
+        (usableHeight - padY * 2) / height
+      ),
+      0.45,
+      maxZoom
+    );
+
+    const centerX = (bounds.minX + bounds.maxX) / 2;
+    const centerY = (bounds.minY + bounds.maxY) / 2;
+
+    state.view.zoom = zoom;
+    state.view.panX = usableWidth / 2 - centerX * zoom;
+    state.view.panY = usableHeight / 2 - centerY * zoom + 18;
+    state.view.userAdjusted = markAdjusted;
+    applyViewportTransform();
+  }
+
+  function isMobileLayout() {
+    return window.matchMedia('(max-width: 900px)').matches;
+  }
 
   function svg(tag, attrs = {}) {
     const el = document.createElementNS(SVG_NS, tag);
@@ -758,15 +949,26 @@
     });
   }
 
-  function addComponent(type, x = canvas.clientWidth / 2, y = canvas.clientHeight / 2) {
+  function addComponent(type, x = null, y = null) {
     snapshot();
+
+    if (x === null || y === null) {
+      const bottomBar = document.getElementById('bottomBar');
+      const visibleCenter = screenToWorld(
+        canvas.clientWidth / 2,
+        (canvas.clientHeight - (bottomBar?.offsetHeight || 82)) / 2
+      );
+      x = visibleCenter.x;
+      y = visibleCenter.y;
+    }
+
     const component = {
       id: `c${state.nextComponent++}`,
       type,
       name: componentName(type),
       value: type === 'resistor' ? 1000 : type === 'voltage' ? 1 : 0,
-      x: snap(clamp(x, 72, canvas.clientWidth - 72)),
-      y: snap(clamp(y, 72, canvas.clientHeight - 120)),
+      x: snap(clamp(x, -5000, 5000)),
+      y: snap(clamp(y, -5000, 5000)),
       rotation: 0
     };
     state.components.push(component);
@@ -877,6 +1079,7 @@
   }
 
   function render() {
+    applyViewportTransform();
     wireLayer.innerHTML = '';
     componentLayer.innerHTML = '';
     overlayLayer.innerHTML = '';
@@ -2071,17 +2274,55 @@
     };
   }
 
+  function openSolutionPanel() {
+    if (!state.analysisData) return;
+    solutionPanel.classList.add('open');
+    document.getElementById('app').classList.add('solution-open');
+    solutionToggleBtn.classList.remove('available');
+
+    requestAnimationFrame(() => {
+      if (!state.view.userAdjusted && !isMobileLayout()) fitCircuit(false);
+      else render();
+    });
+  }
+
+  function closeSolutionPanel() {
+    solutionPanel.classList.remove('open');
+    document.getElementById('app').classList.remove('solution-open');
+
+    if (state.analysisData) {
+      solutionToggleBtn.classList.add('available');
+    }
+
+    requestAnimationFrame(() => {
+      if (!state.view.userAdjusted) fitCircuit(false);
+      else render();
+    });
+  }
+
   function renderSolution() {
     if (!state.analysisData) {
       solutionPanel.classList.remove('open');
       document.getElementById('app').classList.remove('solution-open');
+      solutionToggleBtn.classList.remove('available');
       solutionContent.innerHTML = '';
       return;
     }
+
     solutionTitle.textContent = state.analysisData.title;
     solutionContent.innerHTML = state.analysisData.html;
-    solutionPanel.classList.add('open');
-    document.getElementById('app').classList.add('solution-open');
+
+    const alreadyOpen = solutionPanel.classList.contains('open');
+
+    if (!isMobileLayout()) {
+      openSolutionPanel();
+    } else if (alreadyOpen) {
+      solutionToggleBtn.classList.remove('available');
+    } else {
+      solutionPanel.classList.remove('open');
+      document.getElementById('app').classList.remove('solution-open');
+      solutionToggleBtn.classList.add('available');
+    }
   }
 
   function renderWirePreview() {
@@ -2193,8 +2434,8 @@
   }
 
   function pointerToCanvas(event) {
-    const rect = canvas.getBoundingClientRect();
-    return { x: event.clientX - rect.left, y: event.clientY - rect.top };
+    const screen = screenPoint(event);
+    return screenToWorld(screen.x, screen.y);
   }
 
   canvas.addEventListener('pointerdown', event => {
@@ -2235,11 +2476,35 @@
     }
 
     state.selected = null;
+
+    const screen = screenPoint(event);
+    state.panDrag = {
+      pointerId: event.pointerId,
+      startX: screen.x,
+      startY: screen.y,
+      panX: state.view.panX,
+      panY: state.view.panY
+    };
+
+    canvas.classList.add('pan-cursor');
+    canvas.setPointerCapture(event.pointerId);
     render();
   });
 
   canvas.addEventListener('pointermove', event => {
     state.pointer = pointerToCanvas(event);
+
+    if (state.panDrag && state.panDrag.pointerId === event.pointerId) {
+      const screen = screenPoint(event);
+      state.view.panX =
+        state.panDrag.panX + (screen.x - state.panDrag.startX);
+      state.view.panY =
+        state.panDrag.panY + (screen.y - state.panDrag.startY);
+      state.view.userAdjusted = true;
+      applyViewportTransform();
+      return;
+    }
+
     if (state.wireDrag && state.wireDrag.pointerId === event.pointerId) {
       render();
       return;
@@ -2248,14 +2513,20 @@
       const c = getComponent(state.drag.id);
       if (!c) return;
       const p = state.pointer;
-      c.x = snap(clamp(p.x - state.drag.offsetX, 72, canvas.clientWidth - 72));
-      c.y = snap(clamp(p.y - state.drag.offsetY, 72, canvas.clientHeight - 120));
+      c.x = snap(clamp(p.x - state.drag.offsetX, -5000, 5000));
+      c.y = snap(clamp(p.y - state.drag.offsetY, -5000, 5000));
       stopSimulation(false);
       render();
     }
   });
 
   canvas.addEventListener('pointerup', event => {
+    if (state.panDrag && state.panDrag.pointerId === event.pointerId) {
+      state.panDrag = null;
+      canvas.classList.remove('pan-cursor');
+      return;
+    }
+
     if (state.wireDrag && state.wireDrag.pointerId === event.pointerId) {
       const target = document.elementFromPoint(event.clientX, event.clientY);
       const terminal = target?.closest?.('[data-terminal-ref]');
@@ -2279,6 +2550,8 @@
   canvas.addEventListener('pointercancel', () => {
     state.drag = null;
     state.wireDrag = null;
+    state.panDrag = null;
+    canvas.classList.remove('pan-cursor');
     render();
   });
 
@@ -2466,8 +2739,13 @@
 
       renderSolution();
       render();
+
+      requestAnimationFrame(() => {
+        if (!state.view.userAdjusted) fitCircuit(false);
+      });
+
       setStatus(
-        `${state.analysisMethod === 'mesh' ? 'Mesh' : 'Nodal'} analysis complete · voltages and currents shown on the circuit`,
+        `${state.analysisMethod === 'mesh' ? 'Mesh' : 'Nodal'} complete · live V/I shown`,
         'running'
       );
     } catch (error) {
@@ -2478,6 +2756,11 @@
       runBtn.textContent = '▶';
       renderSolution();
       render();
+
+      requestAnimationFrame(() => {
+        if (!state.view.userAdjusted) fitCircuit(false);
+      });
+
       setStatus(error.message, 'error');
     }
   }
@@ -2539,6 +2822,38 @@
     return `${formatNumber(value)} Ω`;
   }
 
+  document.getElementById('zoomInBtn').addEventListener('click', () => {
+    zoomAtScreenPoint(
+      state.view.zoom * 1.22,
+      canvas.clientWidth / 2,
+      (canvas.clientHeight - document.getElementById('bottomBar').offsetHeight) / 2
+    );
+  });
+
+  document.getElementById('zoomOutBtn').addEventListener('click', () => {
+    zoomAtScreenPoint(
+      state.view.zoom / 1.22,
+      canvas.clientWidth / 2,
+      (canvas.clientHeight - document.getElementById('bottomBar').offsetHeight) / 2
+    );
+  });
+
+  document.getElementById('fitViewBtn').addEventListener('click', () => {
+    fitCircuit(true);
+    setStatus('Circuit fitted to the visible workspace.');
+  });
+
+  canvas.addEventListener('wheel', event => {
+    event.preventDefault();
+    const screen = screenPoint(event);
+    const factor = event.deltaY < 0 ? 1.12 : 1 / 1.12;
+    zoomAtScreenPoint(
+      state.view.zoom * factor,
+      screen.x,
+      screen.y
+    );
+  }, { passive: false });
+
   analysisSelector.addEventListener('click', event => {
     const button = event.target.closest('[data-analysis-method]');
     if (!button) return;
@@ -2559,9 +2874,8 @@
     }
   });
 
-  document.getElementById('closeSolutionBtn').addEventListener('click', () => {
-    solutionPanel.classList.remove('open');
-  });
+  document.getElementById('closeSolutionBtn').addEventListener('click', closeSolutionPanel);
+  solutionToggleBtn.addEventListener('click', openSolutionPanel);
 
   document.getElementById('addBtn').addEventListener('click', () => palette.classList.toggle('open'));
   palette.addEventListener('click', event => {
@@ -2601,11 +2915,19 @@
     }
   });
 
-  window.addEventListener('resize', render);
+  let resizeTimer = null;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      renderSolution();
+      if (!state.view.userAdjusted) fitCircuit(false);
+      else render();
+    }, 80);
+  });
 
   function starterCircuit() {
     const w = canvas.clientWidth;
-    const h = canvas.clientHeight - 82;
+    const h = canvas.clientHeight - document.getElementById('bottomBar').offsetHeight;
     const cx = snap(w * 0.50);
     const cy = snap(h * 0.48);
 
@@ -2620,6 +2942,7 @@
       { id: `w${state.nextWire++}`, a: terminalRef(ground.id, 'gnd'), b: terminalRef(source.id, 'negative') }
     );
     render();
+    requestAnimationFrame(() => fitCircuit(false));
   }
 
   starterCircuit();
