@@ -1,0 +1,2629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>EE Interactive Circuit Simulator</title>
+<style>
+  :root {
+    --bg: #050707;
+    --grid-minor: #11201c;
+    --grid-major: #1a2c27;
+    --wire-off: #d6ddda;
+    --wire-run: #78ff82;
+    --terminal: #78ff82;
+    --selected: #f3df67;
+    --voltage: #8a80ff;
+    --current: #7cff86;
+    --danger: #ff5c52;
+    --text: #e7ece9;
+    --muted: #9aa5a1;
+    --panel: rgba(22, 26, 25, .96);
+    --panel-border: #39423f;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text); font-family: Inter, Arial, Helvetica, sans-serif; }
+  body { overflow: hidden; }
+
+  #app {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    background: var(--bg);
+  }
+
+  #canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    touch-action: none;
+    user-select: none;
+    cursor: default;
+  }
+
+  .floating-btn {
+    position: absolute;
+    width: 64px;
+    height: 64px;
+    border: 1px solid #3c4642;
+    border-radius: 4px;
+    background: rgba(56, 63, 60, .9);
+    color: #dfe6e2;
+    font-size: 50px;
+    line-height: 56px;
+    cursor: pointer;
+    box-shadow: 0 6px 20px rgba(0,0,0,.25);
+  }
+  #addBtn { left: 18px; top: 18px; }
+
+  #palette {
+    position: absolute;
+    left: 18px;
+    top: 92px;
+    width: 230px;
+    padding: 10px;
+    border: 1px solid var(--panel-border);
+    background: var(--panel);
+    border-radius: 8px;
+    box-shadow: 0 12px 30px rgba(0,0,0,.35);
+    display: none;
+    z-index: 20;
+  }
+  #palette.open { display: block; }
+  .palette-title { font-weight: 700; margin: 3px 4px 10px; color: #dfe6e2; }
+  .palette-item {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 11px;
+    margin: 5px 0;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text);
+    text-align: left;
+    cursor: pointer;
+  }
+  .palette-item:hover { background: #2b3330; border-color: #4c5753; }
+  .palette-icon {
+    width: 52px;
+    height: 36px;
+    display: grid;
+    place-items: center;
+  }
+
+  .palette-icon svg {
+    width: 52px;
+    height: 36px;
+    overflow: visible;
+  }
+
+  .palette-icon svg * {
+    fill: none;
+    stroke: #eef5f1;
+    stroke-width: 1.8;
+    vector-effect: non-scaling-stroke;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  #inspector {
+    position: absolute;
+    right: 18px;
+    top: 18px;
+    width: 265px;
+    max-width: calc(100vw - 36px);
+    border: 1px solid var(--panel-border);
+    background: var(--panel);
+    border-radius: 8px;
+    padding: 13px;
+    box-shadow: 0 12px 30px rgba(0,0,0,.35);
+    display: none;
+    z-index: 20;
+  }
+  #inspector.open { display: block; }
+  #inspector h3 { margin: 0 0 10px; font-size: 16px; }
+  .field { margin-top: 10px; }
+  .field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 5px; }
+  .field input {
+    width: 100%;
+    padding: 9px 10px;
+    border: 1px solid #4a5551;
+    background: #0e1110;
+    color: var(--text);
+    border-radius: 5px;
+    font-size: 16px;
+  }
+  .inspector-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+  .inspector-actions button, #wireDeleteBtn {
+    min-height: 40px;
+    border: 1px solid #4a5551;
+    border-radius: 5px;
+    background: #2c3431;
+    color: var(--text);
+    cursor: pointer;
+  }
+  #deleteBtn, #wireDeleteBtn { border-color: #78413e; background: #492625; }
+  .measurement-card { margin-top: 12px; padding-top: 10px; border-top: 1px solid #39423f; font-family: Consolas, monospace; font-size: 13px; line-height: 1.55; }
+  .measurement-card .v { color: var(--voltage); }
+  .measurement-card .i { color: var(--current); }
+
+  #status {
+    position: absolute;
+    left: 50%;
+    top: 18px;
+    transform: translateX(-50%);
+    max-width: 520px;
+    padding: 8px 12px;
+    border: 1px solid rgba(70, 80, 76, .8);
+    border-radius: 6px;
+    background: rgba(12, 15, 14, .86);
+    color: #aeb8b4;
+    font-size: 13px;
+    text-align: center;
+    pointer-events: none;
+    z-index: 10;
+  }
+  #status.error { color: #ff7b73; border-color: #69413e; }
+  #status.running { color: var(--current); }
+
+  #bottomBar {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 82px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    padding: 10px 16px;
+    border-top: 1px solid #353d3a;
+    background: rgba(50, 54, 52, .96);
+    z-index: 15;
+  }
+  .tool-btn {
+    width: 58px;
+    height: 58px;
+    border-radius: 50%;
+    border: 2px solid #aeb6b2;
+    background: #3a403e;
+    color: #e9efec;
+    display: grid;
+    place-items: center;
+    font-size: 27px;
+    cursor: pointer;
+  }
+  .tool-btn:hover { background: #454c49; }
+  #runBtn.running { color: var(--current); border-color: var(--current); }
+  #clearBtn { border-radius: 8px; width: auto; padding: 0 18px; font-size: 15px; }
+
+  .wire-base {
+    fill: none;
+    stroke: var(--wire-off);
+    stroke-width: 2.2;
+    stroke-linecap: square;
+    stroke-linejoin: miter;
+    vector-effect: non-scaling-stroke;
+  }
+  .wire-base.running { stroke: var(--wire-run); }
+  .wire-base.selected { stroke: var(--selected); stroke-width: 3.2; }
+  .wire-hit {
+    fill: none;
+    stroke: transparent;
+    stroke-width: 18;
+    pointer-events: stroke;
+    cursor: pointer;
+  }
+  .wire-flow {
+    fill: none;
+    stroke: #d9ffe0;
+    stroke-width: 3.3;
+    stroke-linecap: round;
+    stroke-dasharray: 2 15;
+    vector-effect: non-scaling-stroke;
+    pointer-events: none;
+    animation: flowForward .8s linear infinite;
+  }
+  .wire-flow.reverse { animation-name: flowReverse; }
+  @keyframes flowForward { to { stroke-dashoffset: -17; } }
+  @keyframes flowReverse { to { stroke-dashoffset: 17; } }
+
+  .component-hit { fill: transparent; stroke: transparent; cursor: grab; }
+  .component-hit:active { cursor: grabbing; }
+  .schematic-line {
+    fill: none;
+    stroke: #edf4f0;
+    stroke-width: 2;
+    vector-effect: non-scaling-stroke;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .schematic-line.running { stroke: var(--wire-run); }
+
+  .resistor-body {
+    fill: #07100d;
+    stroke: #edf4f0;
+    stroke-width: 2;
+    vector-effect: non-scaling-stroke;
+  }
+  .resistor-body.running { stroke: var(--wire-run); }
+
+  .source-circle {
+    fill: #06100c;
+    stroke: #edf4f0;
+    stroke-width: 2;
+    vector-effect: non-scaling-stroke;
+  }
+  .source-circle.running { stroke: var(--wire-run); }
+
+  .component-label {
+    fill: #f2f7f4;
+    font-size: 14px;
+    font-weight: 500;
+    pointer-events: none;
+    paint-order: stroke;
+    stroke: var(--bg);
+    stroke-width: 4px;
+  }
+  .value-label {
+    fill: #b7c3be;
+    font-size: 13px;
+    pointer-events: none;
+    paint-order: stroke;
+    stroke: var(--bg);
+    stroke-width: 4px;
+  }
+  .current-label {
+    fill: var(--current);
+    font-size: 14px;
+    font-weight: 650;
+    pointer-events: none;
+    paint-order: stroke;
+    stroke: var(--bg);
+    stroke-width: 4px;
+  }
+  .voltage-label { fill: var(--voltage); font-size: 15px; font-weight: 600; text-anchor: middle; pointer-events: none; }
+  .terminal-dot { fill: var(--terminal); stroke: #0b160f; stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+  .terminal-dot.selected-terminal { fill: var(--selected); }
+  .terminal-hit { fill: transparent; stroke: transparent; stroke-width: 18; cursor: crosshair; }
+  .selection-ring { fill: none; stroke: var(--selected); stroke-width: 1.5; stroke-dasharray: 5 4; pointer-events: none; vector-effect: non-scaling-stroke; }
+  .node-dot { fill: var(--terminal); stroke: #0d150f; stroke-width: 1.2; vector-effect: non-scaling-stroke; }
+  .wire-preview { fill: none; stroke: var(--selected); stroke-width: 2; stroke-dasharray: 7 5; pointer-events: none; vector-effect: non-scaling-stroke; }
+
+
+  /* =========================================================
+     ANALYSIS METHOD + EDUCATIONAL SOLUTION NOTEBOOK
+     ========================================================= */
+  #analysisSelector {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px;
+    border: 1px solid #59635f;
+    border-radius: 8px;
+    background: #252b29;
+  }
+
+  #analysisSelector .analysis-choice {
+    min-width: 96px;
+    height: 44px;
+    padding: 0 12px;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background: transparent;
+    color: #b9c3bf;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: .04em;
+    cursor: pointer;
+  }
+
+  #analysisSelector .analysis-choice.active {
+    border-color: var(--current);
+    background: #14321d;
+    color: var(--current);
+  }
+
+  #solutionPanel {
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 82px;
+    width: min(420px, 40vw);
+    overflow: auto;
+    border-left: 1px solid var(--panel-border);
+    background: rgba(14, 17, 16, .99);
+    box-shadow: -10px 0 28px rgba(0,0,0,.28);
+    z-index: 19;
+    display: none;
+  }
+
+  #solutionPanel.open { display: block; }
+
+  /* Split-view mode: the solution notebook gets its own space. */
+  #app.solution-open #canvas {
+    width: calc(100% - min(420px, 40vw));
+  }
+
+  #app.solution-open #bottomBar {
+    right: min(420px, 40vw);
+  }
+
+  #app.solution-open #status {
+    left: calc((100% - min(420px, 40vw)) / 2);
+  }
+
+  #app.solution-open #inspector {
+    right: calc(min(420px, 40vw) + 18px);
+  }
+
+  .solution-head {
+    position: sticky;
+    top: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    border-bottom: 1px solid #3a4541;
+    background: rgba(20, 24, 22, .99);
+    z-index: 2;
+  }
+
+  .solution-head strong {
+    color: var(--current);
+    font-size: 15px;
+    letter-spacing: .02em;
+  }
+
+  #closeSolutionBtn {
+    width: 34px;
+    height: 34px;
+    border: 1px solid #4a5551;
+    border-radius: 5px;
+    background: #2a312f;
+    color: var(--text);
+    cursor: pointer;
+  }
+
+  #solutionContent {
+    padding: 13px 14px 18px;
+    color: #d9dfdc;
+    font-size: 13px;
+    line-height: 1.55;
+  }
+
+  .solution-summary {
+    margin-bottom: 12px;
+    padding: 10px 11px;
+    border: 1px solid #3d4944;
+    border-radius: 7px;
+    background: #111513;
+  }
+
+  .solution-step {
+    margin-top: 13px;
+    padding-top: 12px;
+    border-top: 1px solid #313a36;
+  }
+
+  .worked-branch {
+    margin: 10px 0;
+    padding: 10px 11px;
+    border-left: 3px solid #315b47;
+    background: #101412;
+    line-height: 1.7;
+  }
+
+  .worked-branch strong {
+    color: #dfffe5;
+  }
+
+  .step-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    color: #f0f4f2;
+    font-weight: 800;
+  }
+
+  .step-number {
+    display: inline-grid;
+    place-items: center;
+    min-width: 25px;
+    height: 25px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: #173923;
+    color: var(--current);
+    font-family: Consolas, monospace;
+    font-size: 12px;
+  }
+
+  .math-line {
+    margin: 5px 0;
+    padding: 7px 9px;
+    border-left: 3px solid #45524d;
+    background: #0b0e0d;
+    color: #f0e5a0;
+    font-family: "Cambria Math", Consolas, monospace;
+    overflow-wrap: anywhere;
+  }
+
+  .math-line.result {
+    border-left-color: var(--current);
+    color: var(--current);
+    font-weight: 700;
+  }
+
+  .math-line.note {
+    border-left-color: var(--voltage);
+    color: #b9b2ff;
+  }
+
+  .matrix-wrap {
+    overflow-x: auto;
+    margin: 7px 0;
+  }
+
+  .matrix-table {
+    border-collapse: separate;
+    border-spacing: 7px 3px;
+    margin: 0 auto;
+    color: #f3e7a4;
+    font-family: Consolas, monospace;
+  }
+
+  .matrix-table td {
+    min-width: 58px;
+    padding: 4px 7px;
+    text-align: right;
+    border-bottom: 1px solid #38423e;
+  }
+
+  .variable-list {
+    color: #aab5b0;
+    font-family: Consolas, monospace;
+    text-align: center;
+    margin-bottom: 6px;
+  }
+
+  .answer-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+  }
+
+  .answer-chip {
+    padding: 8px 9px;
+    border: 1px solid #33413a;
+    border-radius: 6px;
+    background: #101512;
+    color: var(--current);
+    font-family: Consolas, monospace;
+  }
+
+  .verification-ok { color: var(--current); }
+  .verification-warn { color: var(--danger); }
+
+  .mesh-current-arrow {
+    fill: #ff79c6;
+    font-size: 36px;
+    font-weight: 700;
+    text-anchor: middle;
+    dominant-baseline: middle;
+    pointer-events: none;
+    paint-order: stroke;
+    stroke: var(--bg);
+    stroke-width: 5px;
+    stroke-linejoin: round;
+  }
+
+  .mesh-loop-label {
+    fill: #ffb5dd;
+    font-size: 13px;
+    font-weight: 800;
+    text-anchor: middle;
+    pointer-events: none;
+    paint-order: stroke;
+    stroke: var(--bg);
+    stroke-width: 4px;
+    stroke-linejoin: round;
+  }
+
+  .nodal-node-label {
+    fill: var(--voltage);
+    font-size: 15px;
+    font-weight: 800;
+    pointer-events: none;
+    paint-order: stroke;
+    stroke: var(--bg);
+    stroke-width: 5px;
+    stroke-linejoin: round;
+  }
+
+  @media (max-width: 900px) {
+    #analysisSelector .analysis-choice { min-width: 72px; padding: 0 7px; font-size: 10px; }
+    #solutionPanel {
+      left: 8px;
+      right: 8px;
+      top: auto;
+      bottom: 72px;
+      width: auto;
+      max-height: 48vh;
+      border: 1px solid var(--panel-border);
+      border-radius: 9px 9px 0 0;
+    }
+    #app.solution-open #canvas { width: 100%; }
+    #app.solution-open #bottomBar { right: 0; }
+    #app.solution-open #status { left: 50%; }
+    #app.solution-open #inspector { right: 8px; }
+    .answer-grid { grid-template-columns: 1fr; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .wire-flow { animation: none; }
+  }
+
+  @media (max-width: 720px) {
+    #inspector { top: 92px; right: 8px; width: 230px; }
+    #addBtn { left: 8px; top: 8px; }
+    #palette { left: 8px; top: 82px; }
+    #status { top: 8px; max-width: 50vw; }
+    #bottomBar { height: 72px; gap: 8px; }
+    .tool-btn { width: 50px; height: 50px; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <svg id="canvas" aria-label="Interactive DC circuit workspace">
+    <defs>
+      <pattern id="minorGrid" width="24" height="24" patternUnits="userSpaceOnUse">
+        <path d="M 24 0 L 0 0 0 24" fill="none" stroke="var(--grid-minor)" stroke-width="1" />
+      </pattern>
+      <pattern id="majorGrid" width="120" height="120" patternUnits="userSpaceOnUse">
+        <rect width="120" height="120" fill="url(#minorGrid)" />
+        <path d="M 120 0 L 0 0 0 120" fill="none" stroke="var(--grid-major)" stroke-width="1.2" />
+        <circle cx="0" cy="0" r="3.3" fill="#17241f" />
+      </pattern>
+    </defs>
+    <rect id="gridRect" x="0" y="0" width="100%" height="100%" fill="url(#majorGrid)" />
+    <g id="wireLayer"></g>
+    <g id="componentLayer"></g>
+    <g id="overlayLayer"></g>
+  </svg>
+
+  <button id="addBtn" class="floating-btn" title="Add component" aria-label="Add component">+</button>
+
+  <div id="palette">
+    <div class="palette-title">Add component</div>
+    <button class="palette-item" data-add="resistor">
+      <span class="palette-icon">
+        <svg viewBox="0 0 52 32" aria-hidden="true">
+          <line x1="2" y1="16" x2="12" y2="16"/>
+          <rect x="12" y="8" width="28" height="16" rx="1"/>
+          <line x1="40" y1="16" x2="50" y2="16"/>
+        </svg>
+      </span>
+      <span>Resistor</span>
+    </button>
+    <button class="palette-item" data-add="voltage">
+      <span class="palette-icon">
+        <svg viewBox="0 0 52 36" aria-hidden="true">
+          <line x1="26" y1="1" x2="26" y2="7"/>
+          <circle cx="26" cy="18" r="11"/>
+          <line x1="26" y1="29" x2="26" y2="35"/>
+          <line x1="21" y1="14" x2="31" y2="14"/>
+          <line x1="26" y1="9" x2="26" y2="19"/>
+          <line x1="21" y1="23" x2="31" y2="23"/>
+        </svg>
+      </span>
+      <span>Voltage Source</span>
+    </button>
+    <button class="palette-item" data-add="ground">
+      <span class="palette-icon">
+        <svg viewBox="0 0 52 36" aria-hidden="true">
+          <line x1="26" y1="2" x2="26" y2="16"/>
+          <line x1="13" y1="16" x2="39" y2="16"/>
+          <line x1="18" y1="22" x2="34" y2="22"/>
+          <line x1="22" y1="28" x2="30" y2="28"/>
+        </svg>
+      </span>
+      <span>Ground</span>
+    </button>
+  </div>
+
+  <div id="status">Drag components. Drag from one green terminal to another to wire the circuit.</div>
+
+  <aside id="inspector" aria-live="polite"></aside>
+
+  <aside id="solutionPanel" aria-live="polite">
+    <div class="solution-head">
+      <strong id="solutionTitle">Nodal Analysis Solution</strong>
+      <button id="closeSolutionBtn" type="button" aria-label="Close solution">✕</button>
+    </div>
+    <div id="solutionContent"></div>
+  </aside>
+
+  <div id="bottomBar">
+    <div id="analysisSelector" role="group" aria-label="Analysis method">
+      <button class="analysis-choice active" data-analysis-method="nodal" type="button">NODAL</button>
+      <button class="analysis-choice" data-analysis-method="mesh" type="button">MESH</button>
+    </div>
+    <button id="runBtn" class="tool-btn" title="Run / Pause" aria-label="Run or pause">▶</button>
+    <button id="undoBtn" class="tool-btn" title="Undo" aria-label="Undo">↶</button>
+    <button id="rotateBottomBtn" class="tool-btn" title="Rotate selected component" aria-label="Rotate selected component">↻</button>
+    <button id="deleteBottomBtn" class="tool-btn" title="Delete selected item" aria-label="Delete selected item">⌫</button>
+    <button id="clearBtn" class="tool-btn" title="Clear workspace">CLEAR</button>
+  </div>
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  const SVG_NS = 'http://www.w3.org/2000/svg';
+  const GRID = 24;
+
+  const canvas = document.getElementById('canvas');
+  const wireLayer = document.getElementById('wireLayer');
+  const componentLayer = document.getElementById('componentLayer');
+  const overlayLayer = document.getElementById('overlayLayer');
+  const palette = document.getElementById('palette');
+  const inspector = document.getElementById('inspector');
+  const statusEl = document.getElementById('status');
+  const runBtn = document.getElementById('runBtn');
+  const solutionPanel = document.getElementById('solutionPanel');
+  const solutionTitle = document.getElementById('solutionTitle');
+  const solutionContent = document.getElementById('solutionContent');
+  const analysisSelector = document.getElementById('analysisSelector');
+
+  const state = {
+    components: [],
+    wires: [],
+    selected: null,
+    running: false,
+    measurements: null,
+    analysisMethod: 'nodal',
+    analysisData: null,
+    drag: null,
+    wireDrag: null,
+    pointer: { x: 0, y: 0 },
+    nextComponent: 1,
+    nextWire: 1,
+    history: []
+  };
+
+  const snap = value => Math.round(value / GRID) * GRID;
+  const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+
+  function svg(tag, attrs = {}) {
+    const el = document.createElementNS(SVG_NS, tag);
+    Object.entries(attrs).forEach(([key, value]) => el.setAttribute(key, value));
+    return el;
+  }
+
+  function setStatus(message, type = '') {
+    statusEl.textContent = message;
+    statusEl.className = type;
+  }
+
+  function snapshot() {
+    state.history.push(JSON.stringify({
+      components: state.components,
+      wires: state.wires,
+      nextComponent: state.nextComponent,
+      nextWire: state.nextWire
+    }));
+    if (state.history.length > 50) state.history.shift();
+  }
+
+  function undo() {
+    const item = state.history.pop();
+    if (!item) return;
+    const old = JSON.parse(item);
+    state.components = old.components;
+    state.wires = old.wires;
+    state.nextComponent = old.nextComponent;
+    state.nextWire = old.nextWire;
+    renumberVoltageSources();
+    state.selected = null;
+    stopSimulation(false);
+    render();
+    setStatus('Undo complete.');
+  }
+
+  function componentName(type) {
+    if (type === 'voltage') return 'Vs';
+    const prefix = type === 'resistor' ? 'R' : 'GND';
+    const count = state.components.filter(c => c.type === type).length + 1;
+    return prefix + count;
+  }
+
+  function renumberVoltageSources() {
+    const sources = state.components.filter(c => c.type === 'voltage');
+
+    if (sources.length === 1) {
+      sources[0].name = 'Vs';
+      return;
+    }
+
+    sources.forEach((source, index) => {
+      source.name = `Vs${index + 1}`;
+    });
+  }
+
+  function addComponent(type, x = canvas.clientWidth / 2, y = canvas.clientHeight / 2) {
+    snapshot();
+    const component = {
+      id: `c${state.nextComponent++}`,
+      type,
+      name: componentName(type),
+      value: type === 'resistor' ? 1000 : type === 'voltage' ? 1 : 0,
+      x: snap(clamp(x, 72, canvas.clientWidth - 72)),
+      y: snap(clamp(y, 72, canvas.clientHeight - 120)),
+      rotation: 0
+    };
+    state.components.push(component);
+    renumberVoltageSources();
+    state.selected = { kind: 'component', id: component.id };
+    stopSimulation(false);
+    render();
+    palette.classList.remove('open');
+    setStatus(`${component.type === 'voltage' ? 'Voltage source' : component.name} added. Drag it into position.`);
+  }
+
+  function getComponent(id) {
+    return state.components.find(c => c.id === id) || null;
+  }
+
+  function rotatePoint(x, y, degrees) {
+    const r = degrees * Math.PI / 180;
+    return {
+      x: x * Math.cos(r) - y * Math.sin(r),
+      y: x * Math.sin(r) + y * Math.cos(r)
+    };
+  }
+
+  function localTerminals(component) {
+    if (component.type === 'resistor') {
+      return [
+        { key: 'a', x: -60, y: 0 },
+        { key: 'b', x: 60, y: 0 }
+      ];
+    }
+    if (component.type === 'voltage') {
+      return [
+        { key: 'positive', x: 0, y: -60 },
+        { key: 'negative', x: 0, y: 60 }
+      ];
+    }
+    return [{ key: 'gnd', x: 0, y: -48 }];
+  }
+
+  function terminalRef(componentId, key) {
+    return `${componentId}:${key}`;
+  }
+
+  function parseTerminal(ref) {
+    const split = ref.lastIndexOf(':');
+    return { componentId: ref.slice(0, split), key: ref.slice(split + 1) };
+  }
+
+  function terminalPosition(ref) {
+    const { componentId, key } = parseTerminal(ref);
+    const c = getComponent(componentId);
+    if (!c) return null;
+    const local = localTerminals(c).find(t => t.key === key);
+    if (!local) return null;
+    const rotated = rotatePoint(local.x, local.y, c.rotation || 0);
+    return { x: c.x + rotated.x, y: c.y + rotated.y };
+  }
+
+  function componentTerminalRefs(component) {
+    return localTerminals(component).map(t => terminalRef(component.id, t.key));
+  }
+
+  function routeWire(a, b) {
+    if (Math.abs(a.x - b.x) < 1) return [{ x: a.x, y: a.y }, { x: a.x, y: b.y }];
+    if (Math.abs(a.y - b.y) < 1) return [{ x: a.x, y: a.y }, { x: b.x, y: a.y }];
+
+    const dx = Math.abs(b.x - a.x);
+    const dy = Math.abs(b.y - a.y);
+    if (dx >= dy) {
+      const midX = snap((a.x + b.x) / 2);
+      return [
+        { x: a.x, y: a.y },
+        { x: midX, y: a.y },
+        { x: midX, y: b.y },
+        { x: b.x, y: b.y }
+      ];
+    }
+    const midY = snap((a.y + b.y) / 2);
+    return [
+      { x: a.x, y: a.y },
+      { x: a.x, y: midY },
+      { x: b.x, y: midY },
+      { x: b.x, y: b.y }
+    ];
+  }
+
+  function pointsString(points) {
+    return points.map(p => `${p.x},${p.y}`).join(' ');
+  }
+
+  function connectTerminals(a, b) {
+    if (!a || !b || a === b) return;
+    const exists = state.wires.some(w => (w.a === a && w.b === b) || (w.a === b && w.b === a));
+    if (exists) {
+      setStatus('Those terminals are already connected.');
+      return;
+    }
+    snapshot();
+    state.wires.push({ id: `w${state.nextWire++}`, a, b });
+    state.selected = { kind: 'wire', id: state.wires[state.wires.length - 1].id };
+    stopSimulation(false);
+    render();
+    setStatus('Wire connected.');
+  }
+
+  function isSelected(kind, id) {
+    return state.selected && state.selected.kind === kind && state.selected.id === id;
+  }
+
+  function render() {
+    wireLayer.innerHTML = '';
+    componentLayer.innerHTML = '';
+    overlayLayer.innerHTML = '';
+    renderWires();
+    renderComponents();
+    if (state.running && state.measurements) {
+      renderNodeVoltages();
+      if (state.analysisMethod === 'mesh' && state.analysisData?.cycles) renderMeshOverlays();
+    }
+    if (state.wireDrag) renderWirePreview();
+    renderInspector();
+  }
+
+  function renderWires() {
+    state.wires.forEach(wire => {
+      const a = terminalPosition(wire.a);
+      const b = terminalPosition(wire.b);
+      if (!a || !b) return;
+      const points = routeWire(a, b);
+
+      const base = svg('polyline', {
+        points: pointsString(points),
+        class: `wire-base${state.running ? ' running' : ''}${isSelected('wire', wire.id) ? ' selected' : ''}`
+      });
+      wireLayer.appendChild(base);
+
+      if (state.running && state.measurements) {
+        const info = getWireFlowInfo(wire);
+        if (info && Math.abs(info.current) > 1e-12) {
+          const flow = svg('polyline', {
+            points: pointsString(points),
+            class: `wire-flow${info.current < 0 ? ' reverse' : ''}`
+          });
+          const mag = Math.abs(info.current);
+          const duration = clamp(1.15 - Math.log10(1 + mag * 1000) * 0.22, 0.28, 1.15);
+          flow.style.animationDuration = `${duration}s`;
+          wireLayer.appendChild(flow);
+        }
+      }
+
+      const hit = svg('polyline', {
+        points: pointsString(points),
+        class: 'wire-hit',
+        'data-wire-id': wire.id
+      });
+      wireLayer.appendChild(hit);
+    });
+  }
+
+
+  function componentLabelLayout(component) {
+    const rotation = ((component.rotation || 0) % 360 + 360) % 360;
+
+    if (component.type === 'resistor') {
+      const vertical = rotation === 90 || rotation === 270;
+
+      return vertical
+        ? {
+            name:    { x: 35, y: -8,  anchor: 'start' },
+            value:   { x: 35, y: 12,  anchor: 'start' },
+            current: { x: -38, y: 5,  anchor: 'middle' }
+          }
+        : {
+            name:    { x: 0, y: -19, anchor: 'middle' },
+            value:   { x: 0, y: 27,  anchor: 'middle' },
+            current: { x: 0, y: 47,  anchor: 'middle' }
+          };
+    }
+
+    if (component.type === 'voltage') {
+      const horizontal = rotation === 90 || rotation === 270;
+
+      return horizontal
+        ? {
+            name:    { x: 0, y: -42, anchor: 'middle' },
+            current: { x: 0, y: 44,  anchor: 'middle' }
+          }
+        : {
+            name:    { x: 40, y: 5,   anchor: 'start' },
+            current: { x: -43, y: 5,  anchor: 'middle' }
+          };
+    }
+
+    return {
+      name: { x: 0, y: -56, anchor: 'middle' },
+      current: { x: 0, y: 0, anchor: 'middle' }
+    };
+  }
+
+  function renderComponents() {
+    state.components.forEach(component => {
+      const root = svg('g', { 'data-component-id': component.id });
+      root.setAttribute('transform', `translate(${component.x} ${component.y})`);
+
+      const selected = isSelected('component', component.id);
+      const measurement = state.measurements?.components?.[component.id];
+
+      if (selected) {
+        root.appendChild(svg('rect', {
+          x: -68, y: -68, width: 136, height: 136, rx: 7,
+          class: 'selection-ring'
+        }));
+      }
+
+      const symbol = svg('g', { transform: `rotate(${component.rotation || 0})` });
+      const lineClass = `schematic-line${state.running ? ' running' : ''}`;
+
+      if (component.type === 'resistor') drawResistor(symbol, lineClass);
+      if (component.type === 'voltage') drawVoltageSource(symbol, state.running);
+      if (component.type === 'ground') drawGround(symbol, lineClass);
+      root.appendChild(symbol);
+
+      const hit = svg('rect', {
+        x: -66, y: -58, width: 132, height: 116,
+        class: 'component-hit',
+        'data-component-id': component.id
+      });
+      root.appendChild(hit);
+
+      const layout = componentLabelLayout(component);
+
+      // Ground is already identified by the standard ground symbol and by
+      // the GND = 0 V node label, so do not print "GND1", "GND2", etc.
+      if (component.type !== 'ground') {
+        const name = svg('text', {
+          x: layout.name.x,
+          y: layout.name.y,
+          class: 'component-label',
+          'text-anchor': layout.name.anchor
+        });
+
+        // A voltage source displays only its GIVEN value: 1 V, 12 V, etc.
+        name.textContent = component.type === 'voltage'
+          ? `${formatNumber(component.value)} V`
+          : component.name;
+        root.appendChild(name);
+      }
+
+      if (component.type === 'resistor') {
+        const value = svg('text', {
+          x: layout.value.x,
+          y: layout.value.y,
+          class: 'value-label',
+          'text-anchor': layout.value.anchor
+        });
+        value.textContent = formatResistance(component.value);
+        root.appendChild(value);
+      }
+
+      // Never show a meaningless 0 nA current label on the ground symbol.
+      if (state.running && measurement && component.type !== 'ground') {
+        const current = svg('text', {
+          x: layout.current.x,
+          y: layout.current.y,
+          class: 'current-label',
+          'text-anchor': layout.current.anchor
+        });
+        current.textContent =
+          `${componentCurrentArrow(component, measurement.current)} ` +
+          `${formatCurrent(Math.abs(measurement.current))}`;
+        root.appendChild(current);
+      }
+
+      componentLayer.appendChild(root);
+
+      localTerminals(component).forEach(t => {
+        const ref = terminalRef(component.id, t.key);
+        const pos = terminalPosition(ref);
+        if (!pos) return;
+        const dot = svg('rect', {
+          x: pos.x - 4, y: pos.y - 4, width: 8, height: 8,
+          class: `terminal-dot${state.wireDrag?.start === ref ? ' selected-terminal' : ''}`,
+          'data-terminal-ref': ref
+        });
+        overlayLayer.appendChild(dot);
+        const terminalHit = svg('circle', {
+          cx: pos.x, cy: pos.y, r: 13,
+          class: 'terminal-hit',
+          'data-terminal-ref': ref
+        });
+        overlayLayer.appendChild(terminalHit);
+      });
+
+    });
+
+    renderJunctionDots();
+  }
+
+  function drawResistor(group, lineClass) {
+    group.appendChild(svg('line', {
+      x1: -60, y1: 0, x2: -28, y2: 0,
+      class: lineClass
+    }));
+
+    const body = svg('rect', {
+      x: -28, y: -10,
+      width: 56, height: 20,
+      rx: 1,
+      class: `resistor-body${state.running ? ' running' : ''}`
+    });
+    group.appendChild(body);
+
+    group.appendChild(svg('line', {
+      x1: 28, y1: 0, x2: 60, y2: 0,
+      class: lineClass
+    }));
+  }
+
+  function drawVoltageSource(group, running) {
+    const lineClass = `schematic-line${running ? ' running' : ''}`;
+    const circleClass = `source-circle${running ? ' running' : ''}`;
+
+    group.appendChild(svg('line', { x1: 0, y1: -60, x2: 0, y2: -26, class: lineClass }));
+    group.appendChild(svg('line', { x1: 0, y1: 26, x2: 0, y2: 60, class: lineClass }));
+    group.appendChild(svg('circle', { cx: 0, cy: 0, r: 26, class: circleClass }));
+
+    // Plus near the upper half.
+    group.appendChild(svg('line', { x1: -7, y1: -9, x2: 7, y2: -9, class: lineClass }));
+    group.appendChild(svg('line', { x1: 0, y1: -16, x2: 0, y2: -2, class: lineClass }));
+
+    // Minus near the lower half.
+    group.appendChild(svg('line', { x1: -7, y1: 10, x2: 7, y2: 10, class: lineClass }));
+  }
+
+  function drawGround(group, lineClass) {
+    group.appendChild(svg('line', { x1: 0, y1: -48, x2: 0, y2: -10, class: lineClass }));
+    group.appendChild(svg('line', { x1: -24, y1: -10, x2: 24, y2: -10, class: lineClass }));
+    group.appendChild(svg('line', { x1: -16, y1: -2, x2: 16, y2: -2, class: lineClass }));
+    group.appendChild(svg('line', { x1: -8, y1: 6, x2: 8, y2: 6, class: lineClass }));
+  }
+
+  function renderJunctionDots() {
+    const count = new Map();
+    state.wires.forEach(w => {
+      count.set(w.a, (count.get(w.a) || 0) + 1);
+      count.set(w.b, (count.get(w.b) || 0) + 1);
+    });
+    count.forEach((n, ref) => {
+      if (n < 2) return;
+      const p = terminalPosition(ref);
+      if (!p) return;
+      overlayLayer.appendChild(svg('circle', { cx: p.x, cy: p.y, r: 6, class: 'node-dot' }));
+    });
+  }
+
+  function nodeWireLabelAnchor(node, measurements) {
+    // Ground label: anchor it beside the actual ground symbol.
+    if (node.root === measurements.groundRoot) {
+      const ground = state.components.find(component =>
+        component.type === 'ground' &&
+        terminalRoot(terminalRef(component.id, 'gnd'), measurements) === node.root
+      );
+
+      if (ground) {
+        return {
+          x: ground.x + 54,
+          y: ground.y - 58,
+          anchor: 'start'
+        };
+      }
+    }
+
+    // For a normal node, place the label at the midpoint of the longest
+    // wire segment belonging to that node. This usually gives empty space
+    // between components rather than putting V1 directly over R1.
+    let best = null;
+
+    state.wires.forEach(wire => {
+      const rootA = terminalRoot(wire.a, measurements);
+      const rootB = terminalRoot(wire.b, measurements);
+      if (rootA !== node.root || rootB !== node.root) return;
+
+      const a = terminalPosition(wire.a);
+      const b = terminalPosition(wire.b);
+      if (!a || !b) return;
+
+      const points = routeWire(a, b);
+      for (let i = 0; i < points.length - 1; i++) {
+        const p1 = points[i];
+        const p2 = points[i + 1];
+        const length = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+        if (!best || length > best.length) {
+          best = { p1, p2, length };
+        }
+      }
+    });
+
+    if (best) {
+      const horizontal =
+        Math.abs(best.p2.x - best.p1.x) >=
+        Math.abs(best.p2.y - best.p1.y);
+
+      return horizontal
+        ? {
+            x: (best.p1.x + best.p2.x) / 2,
+            y: best.p1.y - 15,
+            anchor: 'middle'
+          }
+        : {
+            x: best.p1.x + 16,
+            y: (best.p1.y + best.p2.y) / 2 - 4,
+            anchor: 'start'
+          };
+    }
+
+    // Fallback for an isolated node.
+    const points = node.points || [];
+    if (points.length) {
+      return {
+        x: points.reduce((sum, p) => sum + p.x, 0) / points.length,
+        y: points.reduce((sum, p) => sum + p.y, 0) / points.length - 16,
+        anchor: 'middle'
+      };
+    }
+
+    return { x: 20, y: 20, anchor: 'start' };
+  }
+
+  function renderNodeVoltages() {
+    const measurements = state.measurements;
+    const nodes = measurements?.nodes || [];
+
+    nodes.forEach(node => {
+      const anchor = nodeWireLabelAnchor(node, measurements);
+      const label = svg('text', {
+        x: anchor.x,
+        y: anchor.y,
+        class: 'nodal-node-label',
+        'text-anchor': anchor.anchor
+      });
+
+      if (node.root === measurements.groundRoot) {
+        label.textContent = 'GND = 0 V';
+      } else {
+        const index = measurements.nodeIndex.get(node.root);
+        label.textContent =
+          `V${index + 1} = ${formatVoltage(node.voltage)}`;
+      }
+
+      overlayLayer.appendChild(label);
+    });
+  }
+
+
+  function componentCurrentArrow(component, current) {
+    if (!component || component.type === 'ground' || !Number.isFinite(current)) return '';
+    const terminals = localTerminals(component);
+    if (terminals.length < 2) return '';
+    const a = rotatePoint(terminals[0].x, terminals[0].y, component.rotation || 0);
+    const b = rotatePoint(terminals[1].x, terminals[1].y, component.rotation || 0);
+    let dx = b.x - a.x;
+    let dy = b.y - a.y;
+    if (current < 0) { dx *= -1; dy *= -1; }
+    if (Math.abs(dx) >= Math.abs(dy)) return dx >= 0 ? '→' : '←';
+    return dy >= 0 ? '↓' : '↑';
+  }
+
+  function polygonCentroid(points) {
+    if (!points || points.length < 3) {
+      if (!points?.length) return { x: canvas.clientWidth / 2, y: canvas.clientHeight / 2 };
+      return {
+        x: points.reduce((s, p) => s + p.x, 0) / points.length,
+        y: points.reduce((s, p) => s + p.y, 0) / points.length
+      };
+    }
+
+    let twiceArea = 0;
+    let cx = 0;
+    let cy = 0;
+
+    for (let i = 0; i < points.length; i++) {
+      const a = points[i];
+      const b = points[(i + 1) % points.length];
+      const cross = a.x * b.y - b.x * a.y;
+      twiceArea += cross;
+      cx += (a.x + b.x) * cross;
+      cy += (a.y + b.y) * cross;
+    }
+
+    if (Math.abs(twiceArea) < 1e-9) {
+      return {
+        x: points.reduce((s, p) => s + p.x, 0) / points.length,
+        y: points.reduce((s, p) => s + p.y, 0) / points.length
+      };
+    }
+
+    return {
+      x: cx / (3 * twiceArea),
+      y: cy / (3 * twiceArea)
+    };
+  }
+
+  function renderMeshOverlays() {
+    const cycles = state.analysisData?.cycles || [];
+    if (!cycles.length) return;
+
+    cycles.forEach((cycle, index) => {
+      const pts = cycle.visualPoints || [];
+      const center = polygonCentroid(pts);
+
+      const x = clamp(center.x, 42, canvas.clientWidth - 42);
+      const y = clamp(center.y, 70, canvas.clientHeight - 120);
+
+      const current = state.analysisData.meshCurrents?.[index];
+      const clockwise = !Number.isFinite(current) || current >= 0;
+      const arrow = clockwise ? '↻' : '↺';
+
+      const arrowText = svg('text', {
+        x,
+        y,
+        class: 'mesh-current-arrow'
+      });
+      arrowText.textContent = arrow;
+      overlayLayer.appendChild(arrowText);
+
+      const label = svg('text', {
+        x,
+        y: y + 34,
+        class: 'mesh-loop-label'
+      });
+      label.textContent = Number.isFinite(current)
+        ? `I${index + 1} = ${formatCurrent(Math.abs(current))}`
+        : `I${index + 1}`;
+      overlayLayer.appendChild(label);
+    });
+  }
+
+  function matrixHtml(matrix, vector, variables) {
+    const rows = matrix.map((row, r) => {
+      const cells = row.map(value => `<td>${formatMatrixNumber(value)}</td>`).join('');
+      return `<tr>${cells}<td style="color:#7f8b86">│</td><td>${formatMatrixNumber(vector[r])}</td></tr>`;
+    }).join('');
+
+    return `
+      <div class="variable-list">Unknown vector: [ ${variables.join(' , ')} ]ᵀ</div>
+      <div class="matrix-wrap">
+        <table class="matrix-table" aria-label="Linear equation matrix">
+          ${rows}
+        </table>
+      </div>
+    `;
+  }
+
+  function superscriptInteger(value) {
+    const map = {
+      '-': '⁻', '+': '⁺',
+      '0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴',
+      '5': '⁵', '6': '⁶', '7': '⁷', '8': '⁸', '9': '⁹'
+    };
+    return String(value).split('').map(ch => map[ch] || ch).join('');
+  }
+
+  function scientificText(value, digits = 3) {
+    if (!Number.isFinite(value) || Math.abs(value) < 1e-15) return '0';
+    const exponent = Math.floor(Math.log10(Math.abs(value)));
+    const mantissa = value / Math.pow(10, exponent);
+    return `${Number(mantissa.toFixed(digits))} × 10${superscriptInteger(exponent)}`;
+  }
+
+  function formatMatrixNumber(value) {
+    if (!Number.isFinite(value) || Math.abs(value) < 1e-12) return '0';
+    const abs = Math.abs(value);
+    if (abs >= 0.001 && abs < 1e6) {
+      return Number(value.toFixed(6)).toString();
+    }
+    return scientificText(value, 3);
+  }
+
+  function formatEquationResistance(value) {
+    if (!Number.isFinite(value)) return '— Ω';
+    const abs = Math.abs(value);
+    if (abs >= 1e6) return `${formatNumber(value / 1e6)} MΩ`;
+    if (abs >= 1e3) return `${formatNumber(value / 1e3)} kΩ`;
+    return `${formatNumber(value)} Ω`;
+  }
+
+  function rootVariable(root, measurements, html = false) {
+    if (root === measurements.groundRoot) return '0';
+    const index = measurements.nodeIndex.get(root);
+    return html ? `V<sub>${index + 1}</sub>` : `V${index + 1}`;
+  }
+
+  function rootVoltage(root, measurements) {
+    if (root === measurements.groundRoot) return 0;
+    return measurements.solution[measurements.nodeIndex.get(root)];
+  }
+
+  function terminalRoot(ref, measurements) {
+    return measurements.uf.find(ref);
+  }
+
+  function addSignedTerm(terms, sign, text) {
+    terms.push({ sign: sign >= 0 ? 1 : -1, text });
+  }
+
+  function joinSignedTerms(terms) {
+    if (!terms.length) return '0';
+    return terms.map((term, index) => {
+      const prefix = index === 0
+        ? (term.sign < 0 ? '− ' : '')
+        : (term.sign < 0 ? ' − ' : ' + ');
+      return prefix + term.text;
+    }).join('');
+  }
+
+  function buildNodalSolution(measurements) {
+    const resistors = state.components.filter(c => c.type === 'resistor');
+    const sources = state.components.filter(c => c.type === 'voltage');
+    const allNodeRoots = measurements.nonGroundRoots;
+
+    // ----------------------------------------------------------
+    // A source connected directly to ground gives a KNOWN node
+    // voltage immediately. Example:
+    //   + of 1 V source at V1, - at GND  =>  V1 = 1 V
+    // There is no reason to keep a symbol such as "Vs" in the
+    // student's worked solution.
+    // ----------------------------------------------------------
+    const knownVoltage = new Map();
+    knownVoltage.set(measurements.groundRoot, 0);
+
+    const groundedSourceNotes = [];
+    const floatingSources = [];
+
+    sources.forEach((source, sourceIndex) => {
+      const rp = terminalRoot(terminalRef(source.id, 'positive'), measurements);
+      const rn = terminalRoot(terminalRef(source.id, 'negative'), measurements);
+
+      if (rn === measurements.groundRoot && rp !== measurements.groundRoot) {
+        knownVoltage.set(rp, source.value);
+        groundedSourceNotes.push({
+          root: rp,
+          value: source.value,
+          sourceIndex: sourceIndex + 1
+        });
+      } else if (rp === measurements.groundRoot && rn !== measurements.groundRoot) {
+        knownVoltage.set(rn, -source.value);
+        groundedSourceNotes.push({
+          root: rn,
+          value: -source.value,
+          sourceIndex: sourceIndex + 1
+        });
+      } else if (rp !== measurements.groundRoot && rn !== measurements.groundRoot) {
+        floatingSources.push({ source, sourceIndex: sourceIndex + 1, rp, rn });
+      }
+    });
+
+    const nodeNumber = root => {
+      if (root === measurements.groundRoot) return 0;
+      return measurements.nodeIndex.get(root) + 1;
+    };
+
+    const nodeSymbol = (root, html = false) => {
+      if (root === measurements.groundRoot) return '0';
+      const n = nodeNumber(root);
+      return html ? `V<sub>${n}</sub>` : `V${n}`;
+    };
+
+    const valueOrSymbol = (root, html = false) => {
+      if (knownVoltage.has(root)) {
+        return `${formatNumber(knownVoltage.get(root))} V`;
+      }
+      return nodeSymbol(root, html);
+    };
+
+    const unknownRoots = allNodeRoots.filter(root => !knownVoltage.has(root));
+
+    // ----------------------------------------------------------
+    // Standard nodal equations for circuits whose ideal voltage
+    // sources are ground-referenced.
+    // ----------------------------------------------------------
+    const kclRows = unknownRoots.map(root => {
+      const symbolic = [];
+      const substituted = [];
+
+      resistors.forEach(r => {
+        const ra = terminalRoot(terminalRef(r.id, 'a'), measurements);
+        const rb = terminalRoot(terminalRef(r.id, 'b'), measurements);
+        if (ra !== root && rb !== root) return;
+
+        const other = ra === root ? rb : ra;
+        const vi = nodeSymbol(root, true);
+        const vjSymbol = nodeSymbol(other, true);
+        const vjValue = valueOrSymbol(other, true);
+
+        addSignedTerm(symbolic, 1, `(${vi} − ${vjSymbol})/${r.name}`);
+        addSignedTerm(
+          substituted,
+          1,
+          `(${vi} − ${vjValue})/(${formatEquationResistance(r.value)})`
+        );
+      });
+
+      return {
+        node: nodeNumber(root),
+        symbolic: `${joinSignedTerms(symbolic)} = 0`,
+        substituted: `${joinSignedTerms(substituted)} = 0`
+      };
+    });
+
+    // Build a classroom-style conductance matrix for the UNKNOWN
+    // node voltages when no floating voltage source requires a
+    // supernode/MNA treatment.
+    let classroomMatrix = [];
+    let classroomVector = [];
+    let classroomVariables = [];
+    let useMnaFallback = floatingSources.length > 0;
+
+    if (!useMnaFallback && unknownRoots.length) {
+      const idx = new Map(unknownRoots.map((root, i) => [root, i]));
+      const n = unknownRoots.length;
+      classroomMatrix = Array.from({ length: n }, () => Array(n).fill(0));
+      classroomVector = Array(n).fill(0);
+      classroomVariables = unknownRoots.map(root => `V${nodeNumber(root)}`);
+
+      resistors.forEach(r => {
+        const ra = terminalRoot(terminalRef(r.id, 'a'), measurements);
+        const rb = terminalRoot(terminalRef(r.id, 'b'), measurements);
+        const g = 1 / r.value;
+
+        const stampSide = (self, other) => {
+          if (!idx.has(self)) return;
+          const i = idx.get(self);
+          classroomMatrix[i][i] += g;
+
+          if (idx.has(other)) {
+            classroomMatrix[i][idx.get(other)] -= g;
+          } else if (knownVoltage.has(other)) {
+            classroomVector[i] += g * knownVoltage.get(other);
+          }
+        };
+
+        stampSide(ra, rb);
+        stampSide(rb, ra);
+      });
+    }
+
+    // ----------------------------------------------------------
+    // Solved node voltages
+    // ----------------------------------------------------------
+    const nodeAnswers = allNodeRoots.map(root => {
+      const n = nodeNumber(root);
+      const value = rootVoltage(root, measurements);
+      const given = knownVoltage.has(root) ? ' (given directly by the source)' : '';
+      return `V${n} = ${formatNumber(value)} V${given}`;
+    });
+
+    // ----------------------------------------------------------
+    // Branch voltage/current calculations
+    // ----------------------------------------------------------
+    const branchWork = [];
+
+    resistors.forEach(r => {
+      const ra = terminalRoot(terminalRef(r.id, 'a'), measurements);
+      const rb = terminalRoot(terminalRef(r.id, 'b'), measurements);
+      const va = rootVoltage(ra, measurements);
+      const vb = rootVoltage(rb, measurements);
+      const voltage = va - vb;
+      const current = voltage / r.value;
+
+      const aName = ra === measurements.groundRoot ? 'GND' : nodeSymbol(ra);
+      const bName = rb === measurements.groundRoot ? 'GND' : nodeSymbol(rb);
+
+      branchWork.push(`
+        <div class="worked-branch">
+          <strong>${r.name}</strong><br>
+          Voltage across ${r.name}:<br>
+          V<sub>${r.name}</sub> = ${aName} − ${bName}
+          = ${formatNumber(va)} V − ${formatNumber(vb)} V
+          = <strong>${formatNumber(voltage)} V</strong><br><br>
+          Current through ${r.name}:<br>
+          I<sub>${r.name}</sub> = V<sub>${r.name}</sub> / ${r.name}<br>
+          I<sub>${r.name}</sub> =
+          ${formatNumber(voltage)} V / ${formatEquationResistance(r.value)}
+          = <strong>${formatCurrent(current)}</strong>
+        </div>
+      `);
+    });
+
+    sources.forEach((s, k) => {
+      const current = measurements.solution[measurements.nodeCount + k];
+      branchWork.push(`
+        <div class="worked-branch">
+          <strong>Voltage source ${sources.length > 1 ? k + 1 : ''}</strong><br>
+          Given voltage = <strong>${formatNumber(s.value)} V</strong><br>
+          Source current = <strong>${formatCurrent(current)}</strong>
+        </div>
+      `);
+    });
+
+    // ----------------------------------------------------------
+    // Step 1: clearly show which voltages are already GIVEN.
+    // ----------------------------------------------------------
+    const givenNodeHtml = groundedSourceNotes.map(info => {
+      const n = nodeNumber(info.root);
+      return `
+        <div class="worked-branch">
+          <strong>Given source: ${formatNumber(Math.abs(info.value))} V</strong><br>
+          Because one terminal of the source is connected to GND,
+          the connected node voltage is known immediately:<br>
+          <strong>V<sub>${n}</sub> = ${formatNumber(info.value)} V</strong>
+        </div>
+      `;
+    }).join('');
+
+    const unknownNodeHtml = unknownRoots.map(root => `
+      <div class="math-line">
+        V<sub>${nodeNumber(root)}</sub> = unknown
+      </div>
+    `).join('');
+
+    // ----------------------------------------------------------
+    // Matrix section
+    // ----------------------------------------------------------
+    let matrixSection;
+
+    if (useMnaFallback) {
+      const variables = [
+        ...allNodeRoots.map(root => `V${nodeNumber(root)}`),
+        ...sources.map((_, i) => `Is${i + 1}`)
+      ];
+
+      matrixSection = `
+        <div class="note">
+          A voltage source exists between two non-ground nodes, so a
+          <strong>supernode / Modified Nodal Analysis</strong> form is required.
+          The source voltage is still substituted numerically; it is not treated
+          as an unknown "Vs".
+        </div>
+        ${matrixHtml(measurements.matrix, measurements.vector, variables)}
+      `;
+    } else if (!unknownRoots.length) {
+      matrixSection = `
+        <div class="worked-branch">
+          <strong>No simultaneous matrix is needed for this circuit.</strong><br>
+          All non-ground node voltages are already fixed directly by the
+          grounded voltage source(s). Continue to Ohm's law to obtain the currents.
+        </div>
+      `;
+    } else {
+      matrixSection = `
+        <div class="note">
+          Arrange only the unknown node-voltage equations in the form
+          <strong>G · V = I</strong>.
+        </div>
+        ${matrixHtml(classroomMatrix, classroomVector, classroomVariables)}
+      `;
+    }
+
+    const html = `
+      <div class="solution-summary">
+        <strong>Complete Nodal Analysis</strong><br>
+        Use the source voltages as <strong>given numerical values</strong>.
+        We only solve for node voltages that are actually unknown.
+      </div>
+
+      <div class="solution-step">
+        <div class="step-title"><span class="step-number">1</span>Choose ground and identify known/unknown node voltages</div>
+        <div class="math-line note">GND = 0 V</div>
+        ${givenNodeHtml}
+        ${unknownNodeHtml || ''}
+      </div>
+
+      <div class="solution-step">
+        <div class="step-title"><span class="step-number">2</span>Write KCL only at the unknown nodes</div>
+        <div class="note">
+          For each resistor branch:
+          I = (V<sub>node</sub> − V<sub>other</sub>) / R.
+          If the other node voltage is already given by a source, plug that
+          numerical voltage directly into the equation.
+        </div>
+        ${kclRows.length
+          ? kclRows.map(row => `
+              <div style="margin-top:12px"><strong>KCL at V${row.node}</strong></div>
+              <div class="math-line">${row.symbolic}</div>
+              <div class="note">Substitute the given values:</div>
+              <div class="math-line">${row.substituted}</div>
+            `).join('')
+          : `<div class="worked-branch">
+               There is no unknown node that needs a KCL equation in this circuit.
+             </div>`}
+        ${floatingSources.map(info => `
+          <div class="worked-branch">
+            <strong>Floating voltage source ${info.sourceIndex}</strong><br>
+            ${nodeSymbol(info.rp, true)} − ${nodeSymbol(info.rn, true)}
+            = ${formatNumber(info.source.value)} V
+          </div>
+        `).join('')}
+      </div>
+
+      <div class="solution-step">
+        <div class="step-title"><span class="step-number">3</span>Arrange the unknown equations in matrix form</div>
+        ${matrixSection}
+      </div>
+
+      <div class="solution-step">
+        <div class="step-title"><span class="step-number">4</span>State the node-voltage answers</div>
+        <div class="answer-grid">
+          ${nodeAnswers.map(answer => `<div class="answer-chip">${answer}</div>`).join('')}
+        </div>
+      </div>
+
+      <div class="solution-step">
+        <div class="step-title"><span class="step-number">5</span>Calculate the voltage and current of every branch</div>
+        <div class="note">
+          Once the node voltages are known, use voltage difference and Ohm's law.
+        </div>
+        ${branchWork.join('')}
+      </div>
+    `;
+
+    return {
+      method: 'nodal',
+      title: 'Nodal Analysis · Complete Solution',
+      html
+    };
+  }
+
+  function branchGraph(measurements) {
+    const branches = [];
+    state.components.forEach(component => {
+      if (component.type === 'resistor') {
+        const aRef = terminalRef(component.id, 'a');
+        const bRef = terminalRef(component.id, 'b');
+        branches.push({
+          component,
+          kind: 'resistor',
+          n1: terminalRoot(aRef, measurements),
+          n2: terminalRoot(bRef, measurements),
+          resistance: component.value,
+          sourceVoltage: 0
+        });
+      }
+      if (component.type === 'voltage') {
+        const pRef = terminalRef(component.id, 'positive');
+        const nRef = terminalRef(component.id, 'negative');
+        branches.push({
+          component,
+          kind: 'voltage',
+          n1: terminalRoot(pRef, measurements),
+          n2: terminalRoot(nRef, measurements),
+          resistance: 0,
+          sourceVoltage: component.value
+        });
+      }
+    });
+    return branches;
+  }
+
+  function nodeCenter(root, measurements) {
+    const node = measurements.nodes.find(n => n.root === root);
+    if (!node || !node.points.length) {
+      return { x: canvas.clientWidth / 2, y: canvas.clientHeight / 2 };
+    }
+    return {
+      x: node.points.reduce((s, p) => s + p.x, 0) / node.points.length,
+      y: node.points.reduce((s, p) => s + p.y, 0) / node.points.length
+    };
+  }
+
+  function polygonArea(points) {
+    if (points.length < 3) return 0;
+    let total = 0;
+    for (let i = 0; i < points.length; i++) {
+      const a = points[i];
+      const b = points[(i + 1) % points.length];
+      total += a.x * b.y - b.x * a.y;
+    }
+    return total / 2;
+  }
+
+  function graphComponentCount(nodes, branches) {
+    const uf = new UnionFind(nodes);
+    branches.forEach(branch => {
+      if (branch.n1 !== branch.n2) uf.union(branch.n1, branch.n2);
+    });
+    return new Set(nodes.map(n => uf.find(n))).size;
+  }
+
+  function enumerateSimpleCycles(measurements, branches) {
+    const nodes = [...new Set(branches.flatMap(b => [b.n1, b.n2]))];
+    const adjacency = new Map(nodes.map(n => [n, []]));
+
+    branches.forEach((branch, edgeIndex) => {
+      adjacency.get(branch.n1)?.push({ to: branch.n2, edgeIndex });
+      adjacency.get(branch.n2)?.push({ to: branch.n1, edgeIndex });
+    });
+
+    const found = new Map();
+    const MAX_CYCLES = 500;
+
+    function recordCycle(start, pathEdges, pathNodes, closingEdge, closingFrom) {
+      const edgeIndices = [...pathEdges, closingEdge];
+      const key = [...edgeIndices].sort((a, b) => a - b).join(',');
+      if (found.has(key)) return;
+
+      const coefficients = Array(branches.length).fill(0);
+      const visualPoints = [];
+
+      for (let i = 0; i < edgeIndices.length; i++) {
+        const edgeIndex = edgeIndices[i];
+        const branch = branches[edgeIndex];
+        const from = i < pathEdges.length ? pathNodes[i] : closingFrom;
+        const to = i < pathEdges.length ? pathNodes[i + 1] : start;
+
+        coefficients[edgeIndex] =
+          branch.n1 === from && branch.n2 === to ? 1 : -1;
+
+        if (i === 0) visualPoints.push(nodeCenter(from, measurements));
+        visualPoints.push({ x: branch.component.x, y: branch.component.y });
+        visualPoints.push(nodeCenter(to, measurements));
+      }
+
+      // Screen coordinates use y-down. Positive shoelace area is clockwise.
+      if (polygonArea(visualPoints) < 0) {
+        for (let i = 0; i < coefficients.length; i++) coefficients[i] *= -1;
+        visualPoints.reverse();
+      }
+
+      found.set(key, {
+        coefficients,
+        visualPoints,
+        branchIndices: edgeIndices,
+        area: Math.abs(polygonArea(visualPoints))
+      });
+    }
+
+    nodes.forEach(start => {
+      const visitedNodes = new Set([start]);
+      const usedEdges = new Set();
+
+      function dfs(current, pathEdges, pathNodes) {
+        if (found.size >= MAX_CYCLES) return;
+
+        for (const item of adjacency.get(current) || []) {
+          const { to, edgeIndex } = item;
+          if (usedEdges.has(edgeIndex)) continue;
+
+          // Close a cycle. Two-edge cycles are valid in parallel-branch circuits.
+          if (to === start && pathEdges.length >= 1) {
+            recordCycle(start, pathEdges, pathNodes, edgeIndex, current);
+            continue;
+          }
+
+          if (visitedNodes.has(to)) continue;
+
+          usedEdges.add(edgeIndex);
+          visitedNodes.add(to);
+          dfs(to, [...pathEdges, edgeIndex], [...pathNodes, to]);
+          visitedNodes.delete(to);
+          usedEdges.delete(edgeIndex);
+        }
+      }
+
+      dfs(start, [], [start]);
+    });
+
+    return [...found.values()];
+  }
+
+  function addIndependentCycleGF2(candidate, basis) {
+    const vector = candidate.branchIndices.reduce((v, index) => {
+      v[index] = 1;
+      return v;
+    }, Array(candidate.coefficients.length).fill(0));
+
+    for (const row of basis) {
+      if (!vector[row.pivot]) continue;
+      for (let i = row.pivot; i < vector.length; i++) {
+        vector[i] ^= row.vector[i];
+      }
+    }
+
+    const pivot = vector.findIndex(v => v === 1);
+    if (pivot < 0) return false;
+
+    // Keep the basis in pivot order for deterministic reduction.
+    const newRow = { pivot, vector };
+    basis.push(newRow);
+    basis.sort((a, b) => a.pivot - b.pivot);
+    return true;
+  }
+
+  function buildPlanarMeshCycles(measurements, branches) {
+    const nodes = [...new Set(branches.flatMap(b => [b.n1, b.n2]))];
+    const componentCount = graphComponentCount(nodes, branches);
+    const requiredCycleCount = branches.length - nodes.length + componentCount;
+
+    if (requiredCycleCount <= 0) return [];
+
+    const candidates = enumerateSimpleCycles(measurements, branches)
+      .filter(cycle => cycle.area > 1)
+      // Actual visible meshes are normally the smallest bounded independent cycles.
+      .sort((a, b) => a.area - b.area || a.branchIndices.length - b.branchIndices.length);
+
+    const selected = [];
+    const basis = [];
+
+    for (const candidate of candidates) {
+      if (addIndependentCycleGF2(candidate, basis)) {
+        selected.push(candidate);
+        if (selected.length === requiredCycleCount) break;
+      }
+    }
+
+    // Fallback: if the drawing is non-planar/degenerate and the minimum-face
+    // selection cannot reach the graph cycle rank, use any remaining
+    // independent simple cycles so the solver still works.
+    if (selected.length < requiredCycleCount) {
+      for (const candidate of candidates) {
+        if (selected.includes(candidate)) continue;
+        if (addIndependentCycleGF2(candidate, basis)) {
+          selected.push(candidate);
+          if (selected.length === requiredCycleCount) break;
+        }
+      }
+    }
+
+    return selected;
+  }
+
+  function meshExpressionForBranch(branchIndex, cycles) {
+    const pieces = [];
+    cycles.forEach((cycle, meshIndex) => {
+      const c = cycle.coefficients[branchIndex];
+      if (!c) return;
+      pieces.push({ sign: c, text: `I${meshIndex + 1}` });
+    });
+    const joined = joinSignedTerms(pieces);
+    return pieces.length > 1 ? `(${joined})` : joined;
+  }
+
+  function buildMeshSolution(measurements) {
+    const branches = branchGraph(measurements);
+    if (!branches.length) throw new Error('Mesh analysis needs resistor/source branches.');
+
+    const cycles = buildPlanarMeshCycles(measurements, branches);
+    if (!cycles.length) {
+      throw new Error('No closed mesh was found. Mesh analysis requires at least one closed planar loop.');
+    }
+
+    const m = cycles.length;
+    const Z = Array.from({ length: m }, () => Array(m).fill(0));
+    const rhs = Array(m).fill(0);
+
+    for (let l = 0; l < m; l++) {
+      for (let k = 0; k < m; k++) {
+        Z[l][k] = branches.reduce((sum, branch, b) => {
+          if (branch.kind !== 'resistor') return sum;
+          return sum +
+            branch.resistance *
+            cycles[l].coefficients[b] *
+            cycles[k].coefficients[b];
+        }, 0);
+      }
+
+      rhs[l] = -branches.reduce((sum, branch, b) => {
+        if (branch.kind !== 'voltage') return sum;
+        return sum + cycles[l].coefficients[b] * branch.sourceVoltage;
+      }, 0);
+    }
+
+    const meshCurrents = gaussianSolve(Z, rhs);
+    const branchCurrents = branches.map((branch, b) =>
+      cycles.reduce((sum, cycle, k) =>
+        sum + cycle.coefficients[b] * meshCurrents[k], 0)
+    );
+
+    const rawEquations = cycles.map((cycle, loopIndex) => {
+      const terms = [];
+      branches.forEach((branch, b) => {
+        const c = cycle.coefficients[b];
+        if (!c) return;
+        if (branch.kind === 'resistor') {
+          const currentExpr = meshExpressionForBranch(b, cycles);
+          addSignedTerm(
+            terms,
+            c,
+            `${branch.component.name}·${currentExpr}`
+          );
+        } else {
+          addSignedTerm(
+            terms,
+            c,
+            `${formatNumber(branch.sourceVoltage)} V`
+          );
+        }
+      });
+      return `Mesh ${loopIndex + 1}: ${joinSignedTerms(terms)} = 0`;
+    });
+
+    const simplified = Z.map((row, i) => {
+      const terms = row.map((value, k) => ({ sign: value >= 0 ? 1 : -1, value: Math.abs(value), k }))
+        .filter(term => term.value > 1e-12)
+        .map(term => ({ sign: term.sign, text: `${formatNumber(term.value)}·I${term.k + 1}` }));
+      return `${joinSignedTerms(terms)} = ${formatNumber(rhs[i])}`;
+    });
+
+    const branchAnswers = branches.map((branch, b) => {
+      const current = branchCurrents[b];
+      const actual = measurements.components[branch.component.id]?.current;
+      let relation;
+
+      if (branch.kind === 'resistor') {
+        const voltage = current * branch.resistance;
+        relation =
+          `<strong>${branch.component.name}</strong>: ` +
+          `${meshExpressionForBranch(b, cycles)} = ${formatCurrent(current)}<br>` +
+          `${branch.component.name}: V = I·R = ${formatCurrent(current)} × ${formatNumber(branch.resistance)} Ω = ${formatNumber(voltage)} V`;
+      } else {
+        const sourceNumber =
+          branches.filter(item => item.kind === 'voltage').indexOf(branch) + 1;
+        const sourceLabel =
+          branches.filter(item => item.kind === 'voltage').length > 1
+            ? `Voltage source ${sourceNumber}`
+            : 'Voltage source';
+
+        relation =
+          `<strong>${sourceLabel}</strong>: given V = ${formatNumber(branch.sourceVoltage)} V<br>` +
+          `${sourceLabel}: current = ${formatCurrent(current)}`;
+      }
+
+      const compare = Number.isFinite(actual)
+        ? ` <span class="note">(solver check: ${formatCurrent(actual)})</span>`
+        : '';
+      return relation + compare;
+    });
+
+    let maxDifference = 0;
+    branches.forEach((branch, b) => {
+      const actual = measurements.components[branch.component.id]?.current;
+      if (Number.isFinite(actual)) {
+        maxDifference = Math.max(maxDifference, Math.abs(actual - branchCurrents[b]));
+      }
+    });
+
+    const variables = cycles.map((_, i) => `I${i + 1}`);
+
+    const html = `
+      <div class="solution-summary">
+        <strong>Complete Mesh Analysis</strong><br>
+        Independent meshes/loops detected: ${cycles.length}<br>
+        The program forms KVL equations from the circuit you actually built and substitutes each given source voltage directly.<br>
+        Mesh currents are assumed clockwise whenever the drawn geometry permits it.<br>
+        A negative answer means the real current is opposite the assumed loop direction.
+      </div>
+
+      <div class="solution-step">
+        <div class="step-title"><span class="step-number">1</span>Assign the mesh currents</div>
+        ${cycles.map((_, i) => `<div class="math-line note">Mesh ${i + 1}: assume ↻ I${i + 1}</div>`).join('')}
+      </div>
+
+      <div class="solution-step">
+        <div class="step-title"><span class="step-number">2</span>Apply KVL around each independent loop</div>
+        ${rawEquations.map(eq => `<div class="math-line">${eq}</div>`).join('')}
+        <div style="margin-top:9px"><strong>Simplified equations</strong></div>
+        ${simplified.map(eq => `<div class="math-line">${eq}</div>`).join('')}
+      </div>
+
+      <div class="solution-step">
+        <div class="step-title"><span class="step-number">3</span>Write the mesh equations in matrix form</div>
+        <div class="math-line note">Z · I = V</div>
+        ${matrixHtml(Z, rhs, variables)}
+      </div>
+
+      <div class="solution-step">
+        <div class="step-title"><span class="step-number">4</span>Solve the mesh currents</div>
+        <div class="answer-grid">
+          ${meshCurrents.map((value, i) => `<div class="answer-chip">I${i + 1} = ${formatCurrent(value)}</div>`).join('')}
+        </div>
+      </div>
+
+      <div class="solution-step">
+        <div class="step-title"><span class="step-number">5</span>Find the actual branch voltages and currents</div>
+        ${branchAnswers.map(answer => `<div class="math-line">${answer}</div>`).join('')}
+      </div>
+
+      <div class="solution-step">
+        <div class="step-title"><span class="step-number">6</span>Verify against the circuit solver</div>
+        <div class="math-line result">Maximum mesh-vs-MNA branch-current difference = ${maxDifference.toExponential(3)} A</div>
+      </div>
+    `;
+
+    return {
+      method: 'mesh',
+      title: 'Mesh Analysis · Complete Solution',
+      html,
+      cycles,
+      meshCurrents,
+      branchCurrents,
+      matrix: Z,
+      vector: rhs
+    };
+  }
+
+  function renderSolution() {
+    if (!state.analysisData) {
+      solutionPanel.classList.remove('open');
+      document.getElementById('app').classList.remove('solution-open');
+      solutionContent.innerHTML = '';
+      return;
+    }
+    solutionTitle.textContent = state.analysisData.title;
+    solutionContent.innerHTML = state.analysisData.html;
+    solutionPanel.classList.add('open');
+    document.getElementById('app').classList.add('solution-open');
+  }
+
+  function renderWirePreview() {
+    const start = terminalPosition(state.wireDrag.start);
+    if (!start) return;
+    const end = { x: snap(state.pointer.x), y: snap(state.pointer.y) };
+    const path = svg('polyline', {
+      points: pointsString(routeWire(start, end)),
+      class: 'wire-preview'
+    });
+    overlayLayer.appendChild(path);
+  }
+
+  function renderInspector() {
+    if (!state.selected) {
+      inspector.classList.remove('open');
+      inspector.innerHTML = '';
+      return;
+    }
+
+    if (state.selected.kind === 'wire') {
+      const wire = state.wires.find(w => w.id === state.selected.id);
+      if (!wire) { state.selected = null; return renderInspector(); }
+      inspector.classList.add('open');
+      inspector.innerHTML = `
+        <h3>Wire ${wire.id}</h3>
+        <div style="color:var(--muted);font-size:13px;line-height:1.5">Ideal conductor. Wire crossings are not junctions unless the wires share the same terminal.</div>
+        <button id="wireDeleteBtn" style="width:100%;margin-top:12px">Delete wire</button>
+      `;
+      document.getElementById('wireDeleteBtn').addEventListener('click', deleteSelected);
+      return;
+    }
+
+    const component = getComponent(state.selected.id);
+    if (!component) { state.selected = null; return renderInspector(); }
+    inspector.classList.add('open');
+
+    const unit = component.type === 'resistor' ? 'Ω' : component.type === 'voltage' ? 'V' : '';
+    const valueField = component.type === 'ground' ? '' : `
+      <div class="field">
+        <label>Value (${unit})</label>
+        <input id="valueInput" type="number" step="any" min="${component.type === 'resistor' ? '0.001' : '-1000000'}" value="${component.value}">
+      </div>
+    `;
+
+    const measurement = state.measurements?.components?.[component.id];
+    const measurementHtml = measurement ? `
+      <div class="measurement-card">
+        <div class="v">V = ${formatNumber(measurement.voltage)} V</div>
+        <div class="i">I = ${formatCurrent(measurement.current)}</div>
+      </div>
+    ` : '';
+
+    inspector.innerHTML = `
+      <h3>${component.type === 'voltage' ? `Voltage Source · ${formatNumber(component.value)} V` : component.name + ' · ' + component.type}</h3>
+      ${valueField}
+      <div class="inspector-actions">
+        <button id="rotateBtn">Rotate 90°</button>
+        <button id="deleteBtn">Delete</button>
+      </div>
+      ${measurementHtml}
+    `;
+
+    const valueInput = document.getElementById('valueInput');
+    if (valueInput) {
+      valueInput.addEventListener('change', () => {
+        const next = Number(valueInput.value);
+        const valid = Number.isFinite(next) && (component.type === 'voltage' || next > 0);
+        if (!valid) {
+          valueInput.value = component.value;
+          setStatus('Invalid component value.', 'error');
+          return;
+        }
+        snapshot();
+        component.value = next;
+        if (state.running) runSimulation(); else render();
+      });
+    }
+
+    document.getElementById('rotateBtn').addEventListener('click', rotateSelected);
+    document.getElementById('deleteBtn').addEventListener('click', deleteSelected);
+  }
+
+  function rotateSelected() {
+    if (!state.selected || state.selected.kind !== 'component') return;
+    const c = getComponent(state.selected.id);
+    if (!c || c.type === 'ground') return;
+    snapshot();
+    c.rotation = ((c.rotation || 0) + 90) % 360;
+    stopSimulation(false);
+    render();
+  }
+
+  function deleteSelected() {
+    if (!state.selected) return;
+    snapshot();
+    if (state.selected.kind === 'wire') {
+      state.wires = state.wires.filter(w => w.id !== state.selected.id);
+    } else {
+      const prefix = `${state.selected.id}:`;
+      state.components = state.components.filter(c => c.id !== state.selected.id);
+      state.wires = state.wires.filter(w => !w.a.startsWith(prefix) && !w.b.startsWith(prefix));
+    }
+    renumberVoltageSources();
+    state.selected = null;
+    stopSimulation(false);
+    render();
+    setStatus('Deleted.');
+  }
+
+  function pointerToCanvas(event) {
+    const rect = canvas.getBoundingClientRect();
+    return { x: event.clientX - rect.left, y: event.clientY - rect.top };
+  }
+
+  canvas.addEventListener('pointerdown', event => {
+    const terminal = event.target.closest?.('[data-terminal-ref]');
+    if (terminal) {
+      event.preventDefault();
+      state.pointer = pointerToCanvas(event);
+      state.wireDrag = { start: terminal.dataset.terminalRef, pointerId: event.pointerId };
+      canvas.setPointerCapture(event.pointerId);
+      render();
+      setStatus('Drag to another green terminal to connect.');
+      return;
+    }
+
+    const wireHit = event.target.closest?.('[data-wire-id]');
+    if (wireHit) {
+      state.selected = { kind: 'wire', id: wireHit.dataset.wireId };
+      render();
+      return;
+    }
+
+    const componentHit = event.target.closest?.('[data-component-id]');
+    if (componentHit) {
+      const c = getComponent(componentHit.dataset.componentId);
+      if (!c) return;
+      state.selected = { kind: 'component', id: c.id };
+      const p = pointerToCanvas(event);
+      snapshot();
+      state.drag = {
+        id: c.id,
+        pointerId: event.pointerId,
+        offsetX: p.x - c.x,
+        offsetY: p.y - c.y
+      };
+      canvas.setPointerCapture(event.pointerId);
+      renderInspector();
+      return;
+    }
+
+    state.selected = null;
+    render();
+  });
+
+  canvas.addEventListener('pointermove', event => {
+    state.pointer = pointerToCanvas(event);
+    if (state.wireDrag && state.wireDrag.pointerId === event.pointerId) {
+      render();
+      return;
+    }
+    if (state.drag && state.drag.pointerId === event.pointerId) {
+      const c = getComponent(state.drag.id);
+      if (!c) return;
+      const p = state.pointer;
+      c.x = snap(clamp(p.x - state.drag.offsetX, 72, canvas.clientWidth - 72));
+      c.y = snap(clamp(p.y - state.drag.offsetY, 72, canvas.clientHeight - 120));
+      stopSimulation(false);
+      render();
+    }
+  });
+
+  canvas.addEventListener('pointerup', event => {
+    if (state.wireDrag && state.wireDrag.pointerId === event.pointerId) {
+      const target = document.elementFromPoint(event.clientX, event.clientY);
+      const terminal = target?.closest?.('[data-terminal-ref]');
+      const start = state.wireDrag.start;
+      state.wireDrag = null;
+      if (terminal && terminal.dataset.terminalRef !== start) {
+        connectTerminals(start, terminal.dataset.terminalRef);
+      } else {
+        render();
+        setStatus('Wire cancelled. Drop on another green terminal.');
+      }
+      return;
+    }
+    if (state.drag && state.drag.pointerId === event.pointerId) {
+      state.drag = null;
+      render();
+      setStatus('Component placed on grid.');
+    }
+  });
+
+  canvas.addEventListener('pointercancel', () => {
+    state.drag = null;
+    state.wireDrag = null;
+    render();
+  });
+
+  class UnionFind {
+    constructor(items) {
+      this.parent = new Map(items.map(x => [x, x]));
+    }
+    find(x) {
+      if (!this.parent.has(x)) this.parent.set(x, x);
+      const p = this.parent.get(x);
+      if (p !== x) this.parent.set(x, this.find(p));
+      return this.parent.get(x);
+    }
+    union(a, b) {
+      const ra = this.find(a);
+      const rb = this.find(b);
+      if (ra !== rb) this.parent.set(rb, ra);
+    }
+  }
+
+  function gaussianSolve(matrix, vector) {
+    const n = vector.length;
+    const a = matrix.map((row, i) => [...row, vector[i]]);
+    for (let col = 0; col < n; col++) {
+      let pivot = col;
+      for (let row = col + 1; row < n; row++) {
+        if (Math.abs(a[row][col]) > Math.abs(a[pivot][col])) pivot = row;
+      }
+      if (Math.abs(a[pivot][col]) < 1e-12) {
+        throw new Error('Circuit is floating, open, or has conflicting ideal voltage sources. Check all connections and ground.');
+      }
+      [a[col], a[pivot]] = [a[pivot], a[col]];
+      const div = a[col][col];
+      for (let j = col; j <= n; j++) a[col][j] /= div;
+      for (let row = 0; row < n; row++) {
+        if (row === col) continue;
+        const factor = a[row][col];
+        for (let j = col; j <= n; j++) a[row][j] -= factor * a[col][j];
+      }
+    }
+    return a.map(row => row[n]);
+  }
+
+  function solveDC() {
+    if (!state.components.length) throw new Error('Add components first.');
+
+    const allTerminals = state.components.flatMap(componentTerminalRefs);
+    const uf = new UnionFind(allTerminals);
+    state.wires.forEach(w => uf.union(w.a, w.b));
+
+    const grounds = state.components.filter(c => c.type === 'ground');
+    if (!grounds.length) throw new Error('Add at least one ground reference.');
+    for (let i = 1; i < grounds.length; i++) {
+      uf.union(terminalRef(grounds[0].id, 'gnd'), terminalRef(grounds[i].id, 'gnd'));
+    }
+    const groundRoot = uf.find(terminalRef(grounds[0].id, 'gnd'));
+
+    const roots = [...new Set(allTerminals.map(t => uf.find(t)))];
+    const nonGroundRoots = roots.filter(r => r !== groundRoot);
+    const nodeIndex = new Map(nonGroundRoots.map((r, i) => [r, i]));
+    const resistors = state.components.filter(c => c.type === 'resistor');
+    const sources = state.components.filter(c => c.type === 'voltage');
+    const nodeCount = nonGroundRoots.length;
+    const size = nodeCount + sources.length;
+    if (!size) throw new Error('Nothing to solve.');
+
+    const A = Array.from({ length: size }, () => Array(size).fill(0));
+    const z = Array(size).fill(0);
+
+    const ni = ref => {
+      const root = uf.find(ref);
+      return root === groundRoot ? -1 : nodeIndex.get(root);
+    };
+
+    resistors.forEach(r => {
+      if (!(r.value > 0)) throw new Error(`${r.name} must be greater than 0 Ω.`);
+      const a = ni(terminalRef(r.id, 'a'));
+      const b = ni(terminalRef(r.id, 'b'));
+      const g = 1 / r.value;
+      if (a >= 0) A[a][a] += g;
+      if (b >= 0) A[b][b] += g;
+      if (a >= 0 && b >= 0) {
+        A[a][b] -= g;
+        A[b][a] -= g;
+      }
+    });
+
+    sources.forEach((s, k) => {
+      const p = ni(terminalRef(s.id, 'positive'));
+      const n = ni(terminalRef(s.id, 'negative'));
+      const q = nodeCount + k;
+      if (p >= 0) { A[p][q] += 1; A[q][p] += 1; }
+      if (n >= 0) { A[n][q] -= 1; A[q][n] -= 1; }
+      z[q] = s.value;
+    });
+
+    const solution = gaussianSolve(A, z);
+    const nodeVoltage = ref => {
+      const index = ni(ref);
+      return index < 0 ? 0 : solution[index];
+    };
+
+    const componentMeasurements = {};
+    const terminalEnteringCurrent = {};
+
+    resistors.forEach(r => {
+      const va = nodeVoltage(terminalRef(r.id, 'a'));
+      const vb = nodeVoltage(terminalRef(r.id, 'b'));
+      const v = va - vb;
+      const i = v / r.value;
+      componentMeasurements[r.id] = {
+        voltage: v,
+        current: i,
+        arrow: i >= 0 ? '→' : '←'
+      };
+      terminalEnteringCurrent[terminalRef(r.id, 'a')] = i;
+      terminalEnteringCurrent[terminalRef(r.id, 'b')] = -i;
+    });
+
+    sources.forEach((s, k) => {
+      const i = solution[nodeCount + k];
+      componentMeasurements[s.id] = {
+        voltage: s.value,
+        current: i,
+        arrow: i >= 0 ? '↓' : '↑'
+      };
+      terminalEnteringCurrent[terminalRef(s.id, 'positive')] = i;
+      terminalEnteringCurrent[terminalRef(s.id, 'negative')] = -i;
+    });
+
+    grounds.forEach(g => {
+      componentMeasurements[g.id] = { voltage: 0, current: 0, arrow: '' };
+    });
+
+    const nodePoints = new Map();
+    allTerminals.forEach(ref => {
+      const root = uf.find(ref);
+      if (!nodePoints.has(root)) nodePoints.set(root, []);
+      const p = terminalPosition(ref);
+      if (p) nodePoints.get(root).push(p);
+    });
+
+    const nodes = [];
+    roots.forEach(root => {
+      const voltage = root === groundRoot ? 0 : solution[nodeIndex.get(root)];
+      nodes.push({ root, voltage, points: nodePoints.get(root) || [] });
+    });
+
+    return {
+      components: componentMeasurements,
+      terminalEnteringCurrent,
+      nodes,
+      uf,
+      groundRoot,
+      roots,
+      nonGroundRoots,
+      nodeIndex,
+      nodeCount,
+      matrix: A,
+      vector: z,
+      solution
+    };
+  }
+
+  function getWireFlowInfo(wire) {
+    const m = state.measurements;
+    if (!m) return null;
+    const ia = m.terminalEnteringCurrent[wire.a];
+    const ib = m.terminalEnteringCurrent[wire.b];
+    if (Number.isFinite(ia)) return { current: -ia };
+    if (Number.isFinite(ib)) return { current: ib };
+    return null;
+  }
+
+  function runSimulation() {
+    try {
+      state.measurements = solveDC();
+      state.analysisData = state.analysisMethod === 'mesh'
+        ? buildMeshSolution(state.measurements)
+        : buildNodalSolution(state.measurements);
+
+      state.running = true;
+      runBtn.classList.add('running');
+      runBtn.textContent = 'Ⅱ';
+
+      renderSolution();
+      render();
+      setStatus(
+        `${state.analysisMethod === 'mesh' ? 'Mesh' : 'Nodal'} analysis complete · voltages and currents shown on the circuit`,
+        'running'
+      );
+    } catch (error) {
+      state.running = false;
+      state.measurements = null;
+      state.analysisData = null;
+      runBtn.classList.remove('running');
+      runBtn.textContent = '▶';
+      renderSolution();
+      render();
+      setStatus(error.message, 'error');
+    }
+  }
+
+  function stopSimulation(showMessage = true, keepSolution = false) {
+    state.running = false;
+    state.measurements = null;
+    if (!keepSolution) state.analysisData = null;
+    runBtn.classList.remove('running');
+    runBtn.textContent = '▶';
+    if (!keepSolution) renderSolution();
+    if (showMessage) setStatus('Simulation paused. Circuit remains editable.');
+  }
+
+  function toggleRun() {
+    if (state.running) {
+      stopSimulation(true, true);
+      render();
+      renderSolution();
+    } else {
+      runSimulation();
+    }
+  }
+
+  function formatNumber(value) {
+    if (!Number.isFinite(value) || Math.abs(value) < 1e-12) return '0';
+    const abs = Math.abs(value);
+
+    // Keep normal classroom values readable instead of showing 1.00e+3.
+    if (abs >= 0.001 && abs < 1e6) {
+      return Number(value.toFixed(3)).toString();
+    }
+
+    return scientificText(value, 2);
+  }
+
+  function formatVoltage(value) {
+    if (!Number.isFinite(value)) return '— V';
+    const abs = Math.abs(value);
+    if (abs >= 1) return `${formatNumber(value)} V`;
+    if (abs >= 1e-3) return `${formatNumber(value * 1e3)} mV`;
+    if (abs >= 1e-6) return `${formatNumber(value * 1e6)} µV`;
+    return `${scientificText(value, 2)} V`;
+  }
+
+  function formatCurrent(value) {
+    if (!Number.isFinite(value)) return '—';
+    const abs = Math.abs(value);
+    if (abs >= 1) return `${formatNumber(value)} A`;
+    if (abs >= 1e-3) return `${formatNumber(value * 1e3)} mA`;
+    if (abs >= 1e-6) return `${formatNumber(value * 1e6)} µA`;
+    return `${formatNumber(value * 1e9)} nA`;
+  }
+
+  function formatResistance(value) {
+    const abs = Math.abs(value);
+    if (abs >= 1e6) return `${formatNumber(value / 1e6)} MΩ`;
+    if (abs >= 1e3) return `${formatNumber(value / 1e3)} kΩ`;
+    return `${formatNumber(value)} Ω`;
+  }
+
+  analysisSelector.addEventListener('click', event => {
+    const button = event.target.closest('[data-analysis-method]');
+    if (!button) return;
+    const method = button.dataset.analysisMethod;
+    if (method !== 'nodal' && method !== 'mesh') return;
+
+    state.analysisMethod = method;
+    analysisSelector.querySelectorAll('[data-analysis-method]').forEach(item => {
+      item.classList.toggle('active', item.dataset.analysisMethod === method);
+    });
+
+    if (state.running) {
+      runSimulation();
+    } else {
+      state.analysisData = null;
+      renderSolution();
+      setStatus(`${method === 'mesh' ? 'Mesh' : 'Nodal'} analysis selected. Press Run to generate the complete solution.`);
+    }
+  });
+
+  document.getElementById('closeSolutionBtn').addEventListener('click', () => {
+    solutionPanel.classList.remove('open');
+  });
+
+  document.getElementById('addBtn').addEventListener('click', () => palette.classList.toggle('open'));
+  palette.addEventListener('click', event => {
+    const button = event.target.closest('[data-add]');
+    if (button) addComponent(button.dataset.add);
+  });
+  runBtn.addEventListener('click', toggleRun);
+  document.getElementById('undoBtn').addEventListener('click', undo);
+  document.getElementById('rotateBottomBtn').addEventListener('click', rotateSelected);
+  document.getElementById('deleteBottomBtn').addEventListener('click', deleteSelected);
+  document.getElementById('clearBtn').addEventListener('click', () => {
+    if (!confirm('Clear the entire circuit?')) return;
+    snapshot();
+    state.components = [];
+    state.wires = [];
+    state.selected = null;
+    stopSimulation(false);
+    render();
+    setStatus('Workspace cleared.');
+  });
+
+  document.addEventListener('keydown', event => {
+    const tag = document.activeElement?.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+    if (event.key === 'Delete' || event.key === 'Backspace') {
+      event.preventDefault();
+      deleteSelected();
+    }
+    if (event.key.toLowerCase() === 'r') rotateSelected();
+    if (event.code === 'Space') {
+      event.preventDefault();
+      toggleRun();
+    }
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
+      event.preventDefault();
+      undo();
+    }
+  });
+
+  window.addEventListener('resize', render);
+
+  function starterCircuit() {
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight - 82;
+    const cx = snap(w * 0.50);
+    const cy = snap(h * 0.48);
+
+    const source = { id: `c${state.nextComponent++}`, type: 'voltage', name: 'Vs', value: 1, x: cx - 144, y: cy, rotation: 0 };
+    const resistor = { id: `c${state.nextComponent++}`, type: 'resistor', name: 'R1', value: 1000, x: cx + 144, y: cy, rotation: 90 };
+    const ground = { id: `c${state.nextComponent++}`, type: 'ground', name: 'GND1', value: 0, x: cx + 144, y: cy + 144, rotation: 0 };
+    state.components.push(source, resistor, ground);
+
+    state.wires.push(
+      { id: `w${state.nextWire++}`, a: terminalRef(source.id, 'positive'), b: terminalRef(resistor.id, 'a') },
+      { id: `w${state.nextWire++}`, a: terminalRef(resistor.id, 'b'), b: terminalRef(ground.id, 'gnd') },
+      { id: `w${state.nextWire++}`, a: terminalRef(ground.id, 'gnd'), b: terminalRef(source.id, 'negative') }
+    );
+    render();
+  }
+
+  starterCircuit();
+})();
+</script>
+</body>
+</html>
